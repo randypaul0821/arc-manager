@@ -1,0 +1,63 @@
+{
+  "id": "portable_tv",
+  "name": {
+    "da": "Bærbart TV",
+    "de": "Tragbarer Fernseher",
+    "en": "Portable TV",
+    "es": "TV portátil",
+    "fr": "Télévision Portable",
+    "he": "טלוויזיה ניידת",
+    "hr": "Prijenosni TV",
+    "it": "TV portatile",
+    "ja": "携帯テレビ",
+    "ko-KR": "휴대용 TV",
+    "no": "Bærbar TV",
+    "pl": "Przenośny telewizor",
+    "pt": "TV portátil",
+    "pt-BR": "TV Portátil",
+    "ru": "Портативный телевизор",
+    "sr": "Prenosni TV",
+    "tr": "Portatif Televizyon",
+    "uk": "Портативний телевізор",
+    "zh-CN": "便携式电视",
+    "zh-TW": "攜帶型電視"
+  },
+  "description": {
+    "da": "Kan genbruges til håndværksmaterialer.",
+    "de": "Kann zu Herstellungsmaterialien recycelt werden.",
+    "en": "Can be recycled into crafting materials.",
+    "es": "Se puede reciclar en materiales de fabricación.",
+    "fr": "Peut être recyclé en matériaux d'artisanat.",
+    "he": "ניתן למחזור לחומרי יצירה.",
+    "hr": "Može se reciklirati u materijale za izradu.",
+    "it": "Si può riciclare in materiali da costruzione.",
+    "ja": "クラフト素材にリサイクルできる。",
+    "ko-KR": "제작 재료로 재활용할 수 있다.",
+    "no": "Kan resirkuleres til håndverksmateriell.",
+    "pl": "Można przetworzyć na materiały rzemieślnicze.",
+    "pt": "Pode ser reciclado em materiais de fabricação.",
+    "pt-BR": "Pode ser reciclado em materiais de fabricação.",
+    "ru": "Можно переработать в материалы для крафта.",
+    "sr": "Može se reciklirati u materijale za izradu.",
+    "tr": "İşleme malzemelerine geri dönüştürülebilir.",
+    "uk": "Можна переробити на матеріали для крафту.",
+    "zh-CN": "可以回收成制作材料。",
+    "zh-TW": "可以回收成製作材料。"
+  },
+  "type": "Recyclable",
+  "rarity": "Rare",
+  "foundIn": "Residential",
+  "value": 2000,
+  "weightKg": 3,
+  "stackSize": 1,
+  "recyclesInto": {
+    "battery": 2,
+    "wires": 6
+  },
+  "salvagesInto": {
+    "wires": 4
+  },
+  "imageFilename": "https://cdn.arctracker.io/items/portable_tv.png",
+  "updatedAt": "01/09/2026",
+  "addedIn": "base"
+}

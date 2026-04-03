@@ -1,0 +1,141 @@
+{
+  "id": "compensator_i",
+  "name": {
+    "da": "Kompensator I",
+    "de": "Kompensator I",
+    "en": "Compensator I",
+    "es": "Compensador I",
+    "fr": "Compensateur I",
+    "he": "מפצה I",
+    "hr": "Kompenzator I",
+    "it": "Compensatore I",
+    "ja": "コンペンセイター I",
+    "ko-KR": "보정기 I",
+    "no": "Kompensator I",
+    "pl": "Kompensator I",
+    "pt": "Compensador I",
+    "pt-BR": "Compensador I",
+    "ru": "Компенсатор I",
+    "sr": "Kompenzator I",
+    "tr": "Namlu Ağzı Baskısı I",
+    "uk": "Компенсатор I",
+    "zh-CN": "补偿器 I",
+    "zh-TW": "補償器 I"
+  },
+  "description": {
+    "da": "Reducerer lidt spredning pr. skud. Kompatibel med: Arpeggio, Ferro, Renegade, Anvil, Stitcher",
+    "de": "Verringert die Streuung pro Schuss geringfügig. Kompatibel mit: Arpeggio, Rattler, Kettle, Ferro, Anvil",
+    "en": "Slightly reduces per-shot dispersion. Compatible with: Arpeggio, Ferro, Renegade, Anvil, Stitcher",
+    "es": "Reduce ligeramente la dispersión por disparo. Compatible con: Arpeggio, Ferro, Renegado, Yunque, Costurero",
+    "fr": "Réduit légèrement la dispersion par tir. Compatible avec : Arpège, Ferro, Renégat, Enclume, Sutureur",
+    "he": "מפחית מעט את הפיזור בכל ירייה. תואם ל: Arpeggio, Ferro, Renegade, Anvil, Stitcher",
+    "hr": "Blago smanjuje raspršenje po hicu. Kompatibilno s: Arpeggio, Ferro, Renegade, Anvil, Stitcher",
+    "it": "Riduce leggermente la dispersione per colpo. Compatibile con: Arpeggio, Ferro, Renegade, Anvil, Stitcher",
+    "ja": "射撃ごとの拡散をわずかに軽減する。対応武器：Arpeggio、Ferro、Renegade、Anvil、Stitcher",
+    "ko-KR": "발사당 분산도를 약간 감소시킵니다. 호환 무기: 아르페지오, 페로, 레니게이드, 앤빌, 스티처",
+    "no": "Reduserer litt spredning per skudd. Kompatibel med: Arpeggio, Ferro, Renegade, Anvil, Stitcher",
+    "pl": "Nieznacznie zmniejsza rozrzut na strzał. Kompatybilny z: Arpeggio, Ferro, Renegade, Anvil, Stitcher",
+    "pt": "Reduz ligeiramente a dispersão por tiro. Compatível com: Arpeggio, Ferro, Renegade, Anvil, Stitcher",
+    "pt-BR": "Reduz de maneira sutil a dispersão por disparo. Compatível com: Arpeggio, Bettina, Ferro, Renegado, Bigorna",
+    "ru": "Немного снижает разброс при каждом выстреле. Совместимо с: Arpeggio, Ferro, Renegade, Anvil, Stitcher",
+    "sr": "Blago smanjuje rasipanje po hicu. Kompatibilno sa: Arpeggio, Ferro, Renegade, Anvil, Stitcher",
+    "tr": "Atış başına dağılımı hafifçe azaltır. Uyumlu silahlar: Arpeggio, Ferro, Renegade, Anvil, Stitcher",
+    "uk": "Трохи зменшує розкид при кожному пострілі. Сумісно з: Arpeggio, Ferro, Renegade, Anvil, Stitcher",
+    "zh-CN": "略微降低每次射击的扩散度。兼容武器：Arpeggio、Ferro、Renegade、Anvil、Stitcher",
+    "zh-TW": "略微降低每次射擊的擴散度。相容武器：Arpeggio、Ferro、Renegade、Anvil、Stitcher"
+  },
+  "type": "Modification",
+  "rarity": "Common",
+  "value": 640,
+  "weightKg": 0.25,
+  "stackSize": 1,
+  "compatibleWith": [
+    "Anvil",
+    "Arpeggio",
+    "Bettina",
+    "Bobcat",
+    "Burletta",
+    "Ferro",
+    "Kettle",
+    "Osprey",
+    "Rattler",
+    "Renegade",
+    "Stitcher",
+    "Tempest",
+    "Torrente"
+  ],
+  "effects": {
+    "Reduced Max Shot Dispersion": {
+      "value": "10%",
+      "da": "Reduceret maksimal spredning",
+      "de": "Verringerte max. Streuung pro Schuss",
+      "en": "Reduced Max Shot Dispersion",
+      "es": "Dispersión máxima reducida",
+      "fr": "Dispersion maximale réduite",
+      "he": "פיזור ירי מרבי מופחת",
+      "hr": "Smanjeno Maks. Raspršenje Hica",
+      "it": "Dispersione massima ridotta",
+      "ja": "最大拡散軽減",
+      "ko-KR": "최대 분산도 감소",
+      "no": "Redusert maksimal spredning",
+      "pl": "Zmniejszony maksymalny rozrzut",
+      "pt": "Dispersão máxima reduzida",
+      "pt-BR": "Redução na Dispersão do máximo de Disparos",
+      "ru": "Снижение максимального разброса",
+      "sr": "Smanjeno Maks. Rasipanje Hica",
+      "tr": "Maksimum Atış Dağılımı Azaltma",
+      "uk": "Зменшення максимального розкиду",
+      "zh-CN": "降低最大扩散度",
+      "zh-TW": "降低最大擴散度"
+    },
+    "Reduced Per-Shot Dispersion": {
+      "value": "20%",
+      "da": "Reduceret spredning pr. skud",
+      "de": "Verringerte Streuung pro Schuss",
+      "en": "Reduced Per-Shot Dispersion",
+      "es": "Dispersión por disparo reducida",
+      "fr": "Dispersion par tir réduite",
+      "he": "פיזור מופחת בכל ירייה",
+      "hr": "Smanjeno Raspršenje po Hicu",
+      "it": "Dispersione per colpo ridotta",
+      "ja": "射撃ごとの拡散軽減",
+      "ko-KR": "발사당 분산도 감소",
+      "no": "Redusert spredning per skudd",
+      "pl": "Zmniejszony rozrzut na strzał",
+      "pt": "Dispersão por tiro reduzida",
+      "pt-BR": "Redução na Dispersão por Disparo",
+      "ru": "Снижение разброса за выстрел",
+      "sr": "Smanjeno Rasipanje po Hicu",
+      "tr": "Atış Başına Dağılım Azaltma",
+      "uk": "Зменшення розкиду за постріл",
+      "zh-CN": "降低每发扩散度",
+      "zh-TW": "降低每發擴散度"
+    }
+  },
+  "craftBench": "weapon_bench",
+  "stationLevelRequired": 1,
+  "recipe": {
+    "metal_parts": 6,
+    "wires": 1
+  },
+  "recyclesInto": {
+    "metal_parts": 5
+  },
+  "salvagesInto": {
+    "metal_parts": 3
+  },
+  "imageFilename": "https://cdn.arctracker.io/items/compensator_i.png",
+  "updatedAt": "03/22/2026",
+  "addedIn": "base",
+  "vendors": [
+    {
+      "cost": {
+        "coins": 1920
+      },
+      "limit": 5,
+      "refreshSeconds": 86400,
+      "requiredLevel": 7,
+      "trader": "Tian Wen"
+    }
+  ]
+}

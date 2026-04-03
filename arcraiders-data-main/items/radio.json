@@ -1,0 +1,63 @@
+{
+  "id": "radio",
+  "name": {
+    "da": "Radio",
+    "de": "Radio",
+    "en": "Radio",
+    "es": "Radio",
+    "fr": "Radio",
+    "he": "רדיו",
+    "hr": "Radio",
+    "it": "Radio",
+    "ja": "無線",
+    "ko-KR": "라디오",
+    "no": "Radio",
+    "pl": "Radio",
+    "pt": "Rádio",
+    "pt-BR": "Rádio",
+    "ru": "Радио",
+    "sr": "Radio",
+    "tr": "Radyo",
+    "uk": "Радіо",
+    "zh-CN": "收音机",
+    "zh-TW": "收音機"
+  },
+  "description": {
+    "da": "Kan genbruges til håndværkskomponenter.",
+    "de": "Kann zu Herstellungsmaterialien recycelt werden.",
+    "en": "Can be recycled into crafting components.",
+    "es": "Puede reciclarse en componentes de fabricación.",
+    "fr": "Peut être recyclé en composants de fabrication.",
+    "he": "ניתן למחזור לרכיבי יצירה.",
+    "hr": "Može se reciklirati u komponente za izradu.",
+    "it": "Si può riciclare in componenti da crafting.",
+    "ja": "製作部品にリサイクルできる。",
+    "ko-KR": "제작 부품으로 재활용할 수 있습니다.",
+    "no": "Kan resirkuleres til håndverkskomponenter.",
+    "pl": "Można przetworzyć na komponenty rzemieślnicze.",
+    "pt": "Pode ser reciclado em componentes de fabricação.",
+    "pt-BR": "Pode ser reciclado em componentes de fabricação.",
+    "ru": "Можно переработать в компоненты для крафта.",
+    "sr": "Može se reciklirati u komponente za izradu.",
+    "tr": "Üretim bileşenlerine geri dönüştürülebilir.",
+    "uk": "Можна переробити на компоненти для крафту.",
+    "zh-CN": "可回收为制作组件。",
+    "zh-TW": "可回收為製作組件。"
+  },
+  "type": "Recyclable",
+  "rarity": "Rare",
+  "foundIn": "Commercial, Residential",
+  "value": 1000,
+  "weightKg": 2,
+  "stackSize": 3,
+  "recyclesInto": {
+    "sensors": 1,
+    "speaker_component": 1
+  },
+  "salvagesInto": {
+    "speaker_component": 1
+  },
+  "imageFilename": "https://cdn.arctracker.io/items/radio.png",
+  "updatedAt": "11/04/2025",
+  "addedIn": "base"
+}

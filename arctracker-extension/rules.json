@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": {
+      "type": "redirect",
+      "redirect": {
+        "regexSubstitution": "https://arctracker.io/embark-callback?\\1"
+      }
+    },
+    "condition": {
+      "regexFilter": "^http://127\\.0\\.0\\.1:49172/\\?(.*)$",
+      "resourceTypes": ["main_frame", "sub_frame"]
+    }
+  }
+]

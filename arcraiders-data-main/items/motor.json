@@ -1,0 +1,63 @@
+{
+  "id": "motor",
+  "name": {
+    "da": "Motor",
+    "de": "Motor",
+    "en": "Motor",
+    "es": "Motor",
+    "fr": "Moteur",
+    "he": "מנוע",
+    "hr": "Motor",
+    "it": "Motore",
+    "ja": "モーター",
+    "ko-KR": "모터",
+    "no": "Motor",
+    "pl": "Silnik",
+    "pt": "Motor",
+    "pt-BR": "Motor",
+    "ru": "Мотор",
+    "sr": "Motor",
+    "tr": "Motor",
+    "uk": "Мотор",
+    "zh-CN": "马达",
+    "zh-TW": "馬達"
+  },
+  "description": {
+    "da": "En lille elektrisk motor, nyttig til forskellige enheder.",
+    "de": "Ein kleiner Elektromotor, nützlich für verschiedene Geräte.",
+    "en": "A small electric motor, useful for various devices.",
+    "es": "Un pequeño motor eléctrico, útil para varios dispositivos.",
+    "fr": "Un petit moteur électrique, utile pour divers appareils.",
+    "he": "מנוע חשמלי קטן, שימושי למכשירים שונים.",
+    "hr": "Mali električni motor, koristan za razne uređaje.",
+    "it": "Un piccolo motore elettrico, utile per vari dispositivi.",
+    "ja": "小型電動モーター、様々な装置に有用。",
+    "ko-KR": "다양한 장치에 유용한 소형 전기 모터입니다.",
+    "no": "En liten elektrisk motor, nyttig for forskjellige enheter.",
+    "pl": "Mały silnik elektryczny, przydatny do różnych urządzeń.",
+    "pt": "Um pequeno motor elétrico, útil para vários dispositivos.",
+    "pt-BR": "Um pequeno motor elétrico, útil para vários dispositivos.",
+    "ru": "Небольшой электромотор, полезный для различных устройств.",
+    "sr": "Mali električni motor, koristan za razne uređaje.",
+    "tr": "Çeşitli cihazlar için kullanışlı küçük bir elektrik motoru.",
+    "uk": "Невеликий електромотор, корисний для різних пристроїв.",
+    "zh-CN": "小型电动马达，可用于各种装置。",
+    "zh-TW": "小型電動馬達，可用於各種裝置。"
+  },
+  "type": "Recyclable",
+  "rarity": "Rare",
+  "foundIn": "Mechanical",
+  "value": 2000,
+  "weightKg": 3,
+  "stackSize": 3,
+  "recyclesInto": {
+    "mechanical_components": 2,
+    "oil": 2
+  },
+  "salvagesInto": {
+    "oil": 3
+  },
+  "imageFilename": "https://cdn.arctracker.io/items/motor.png",
+  "updatedAt": "02/24/2026",
+  "addedIn": "base"
+}

@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arc Manager Pro</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+</head>
+<body>
+<div class="app">
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-resize" id="sidebarResize"></div>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="32,4 56,18 56,46 32,60 8,46 8,18" stroke="url(#logoGrad)" stroke-width="3" stroke-linejoin="round" fill="none"/>
+        <polygon points="32,12 48,22 48,42 32,52 16,42 16,22" stroke="url(#logoGrad)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(104,114,229,0.08)"/>
+        <text x="32" y="42" text-anchor="middle" font-family="Rajdhani,sans-serif" font-weight="700" font-size="26" fill="url(#logoGrad)">A</text>
+        <defs>
+          <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#6872e5"/>
+            <stop offset="50%" stop-color="#38bdf8"/>
+            <stop offset="100%" stop-color="#e879f9"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+    <div class="logo-texts" style="flex:1">
+      <div class="logo-title">ARC</div>
+      <div class="logo-sub">MANAGER PRO</div>
+    </div>
+  </div>
+  <nav>
+    <div class="nav-item active" data-page="dashboard" data-tip="总览" onclick="showPage('dashboard')">
+      <span class="nav-icon">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+      </span>
+      <span class="nav-label">总览</span>
+    </div>
+    <div class="nav-item" data-page="inventory" data-tip="库存" onclick="showPage('inventory')">
+      <span class="nav-icon">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 7l10-4 10 4v10l-10 4L2 17V7z"/><polyline points="12 3 12 21"/><polyline points="2 7 12 11 22 7"/>
+        </svg>
+      </span>
+      <span class="nav-label">库存</span>
+      <span class="nav-badge" id="alertBadge" style="display:none">!</span>
+    </div>
+    <div class="nav-item" data-page="bundle_monitor" data-tip="重点关注" onclick="showPage('bundle_monitor')">
+      <span class="nav-icon">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 5H2v7l6.29 6.29c.94.94 2.48.94 3.42 0l3.58-3.58c.94-.94.94-2.48 0-3.42L9 5Z"/>
+          <path d="M6 9.01V9"/><path d="m15 5 6.3 6.3a2.4 2.4 0 0 1 0 3.4L17 19"/>
+        </svg>
+      </span>
+      <span class="nav-label">重点关注</span>
+    </div>
+    <div class="nav-item" data-page="orders" data-tip="订单" onclick="showPage('orders')">
+      <span class="nav-icon">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+          <rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/>
+        </svg>
+      </span>
+      <span class="nav-label">订单</span>
+    </div>
+    <div class="nav-item" data-page="bundles" data-tip="套餐库" onclick="showPage('bundles')">
+      <span class="nav-icon">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5" rx="1"/>
+          <line x1="12" y1="22" x2="12" y2="7"/>
+          <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/>
+          <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
+        </svg>
+      </span>
+      <span class="nav-label">套餐库</span>
+    </div>
+    <div class="nav-item" data-page="items" data-tip="物品库" onclick="showPage('items')">
+      <span class="nav-icon">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+      </span>
+      <span class="nav-label">物品库</span>
+    </div>
+    <div class="nav-item" data-page="customers" data-tip="客户" onclick="showPage('customers')">
+      <span class="nav-icon">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m11 17 2 2a1 1 0 1 0 3-3"/>
+          <path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/>
+          <path d="m21 3 1 11h-2"/>
+          <path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/>
+          <path d="M3 4h8"/>
+        </svg>
+      </span>
+      <span class="nav-label">客户</span>
+    </div>
+    <div class="nav-item" data-page="accounts" data-tip="账号" onclick="showPage('accounts')">
+      <span class="nav-icon">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+      </span>
+      <span class="nav-label">账号</span>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <button class="sync-btn" id="syncAllBtn" onclick="syncAll()">↻ 全量同步</button>
+  </div>
+</aside>
+
+<!-- ══════════ MAIN ══════════ -->
+<div class="main">
+
+<!-- ── 总览 ── -->
+<div id="page-dashboard" class="page active">
+  <div class="topbar">
+    <div class="page-title">总览</div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <button class="tag-btn dash-range-btn" onclick="setDashRange('today',this)">今天</button>
+      <button class="tag-btn dash-range-btn active" onclick="setDashRange('7d',this)">7天</button>
+      <button class="tag-btn dash-range-btn" onclick="setDashRange('30d',this)">30天</button>
+      <button class="tag-btn dash-range-btn" onclick="setDashRange('all',this)">全部</button>
+      <div style="width:1px;height:16px;background:var(--border);margin:0 4px"></div>
+      <input type="date" id="dashStatsFrom" style="width:120px;padding:5px 8px;font-size:12px" onchange="setDashRange('custom',null)">
+      <span style="color:var(--text3);font-size:12px">—</span>
+      <input type="date" id="dashStatsTo" style="width:120px;padding:5px 8px;font-size:12px" onchange="setDashRange('custom',null)">
+    </div>
+  </div>
+  <div class="content">
+    <div class="stat-row" style="margin-bottom:12px">
+      <div class="stat-card"><div class="stat-num" id="stat-accounts">—</div><div class="stat-label">活跃账号</div></div>
+      <div class="stat-card"><div class="stat-num" id="stat-items">—</div><div class="stat-label">库存种类</div></div>
+      <div class="stat-card"><div class="stat-num" id="stat-orders">—</div><div class="stat-label">待处理订单</div></div>
+      <div class="stat-card"><div class="stat-num" id="dash-order-count">—</div><div class="stat-label">完成订单</div></div>
+      <div class="stat-card"><div class="stat-num" id="dash-cost" style="color:var(--danger)">—</div><div class="stat-label">总成本</div></div>
+      <div class="stat-card"><div class="stat-num" id="dash-revenue" style="color:var(--accent2)">—</div><div class="stat-label">总营收</div></div>
+      <div class="stat-card"><div class="stat-num" id="dash-profit" style="color:var(--success)">—</div><div class="stat-label">净利润</div></div>
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-header">账号状态</div>
+      <table id="dashAccountTable">
+        <thead><tr><th>账号</th><th>状态</th><th>仓库容量</th><th>最后同步</th><th>操作</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-header">营业走势</div>
+      <div style="padding:16px">
+        <div id="dashEChart" style="height:260px"></div>
+      </div>
+      <div style="padding:0 16px 12px">
+        <div onclick="toggleDailyTable()" style="cursor:pointer;font-size:12px;color:var(--text3);user-select:none;display:flex;align-items:center;gap:4px;margin-bottom:8px">
+          <span id="dailyTableArrow">▶</span><span>每日明细</span>
+        </div>
+        <div id="dashDailyTable" style="display:none"></div>
+        <div id="dashTopItems"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 库存 ── -->
+<div id="page-inventory" class="page" style="overflow:hidden">
+
+  <!-- 第一栏：账号选择器 -->
+  <div id="inv-row2"
+    style="display:flex;gap:7px;padding:7px 14px;border-bottom:1px solid var(--border);
+      background:var(--bg1);overflow-x:auto;flex-shrink:0;
+      scrollbar-width:none;-ms-overflow-style:none"></div>
+
+  <!-- 第二栏：筛选条（搜索 + 分类 + 稀有度） -->
+  <div id="inv-row1" style="flex-shrink:0;border-bottom:1px solid var(--border);background:var(--bg1)"></div>
+
+  <!-- 第三栏：内容区 -->
+  <div id="inv-row3" style="flex:1;overflow:hidden;display:flex;flex-direction:column"></div>
+
+</div>
+
+<!-- ── 套餐监控 ── -->
+<div id="page-bundle_monitor" class="page">
+  <div class="topbar" style="justify-content:space-between">
+    <div class="page-title">重点关注</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn" onclick="_bmRestockAdvice()">📊 补货建议</button>
+      <button class="btn" onclick="_bmOpenSettings()">⚙ 关注设置</button>
+    </div>
+  </div>
+  <div class="content">
+    <!-- 上半：套餐概览 -->
+    <div class="card" style="margin-bottom:20px">
+      <table>
+        <thead><tr>
+          <th style="width:36px"><input type="checkbox" id="bmOverviewCheckAll" onchange="_bmToggleOverviewAll(this.checked)" title="全选/取消全选" style="width:auto"></th>
+          <th style="width:160px;white-space:nowrap">账号 <label style="font-weight:400;font-size:11px;color:var(--text3);margin-left:6px;cursor:pointer"><input type="checkbox" id="bmMultiSelect" onchange="_bmToggleMultiSelect(this.checked)" style="width:auto;vertical-align:middle;cursor:pointer"> 多选</label></th>
+          <th>关注套餐</th>
+          <th style="width:60px" class="col-num">满足</th>
+          <th style="width:60px" class="col-num">缺货</th>
+        </tr></thead>
+        <tbody id="bmOverviewBody"></tbody>
+      </table>
+    </div>
+    <!-- 下半：补货清单 + 存货分布 -->
+    <div id="bmShortageSection">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="tag-btn active" id="bmTabShortage" onclick="_bmSwitchListTab('shortage')">补货清单</button>
+          <button class="tag-btn" id="bmTabInstock" onclick="_bmSwitchListTab('instock')">存货分布</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="tag-btn" id="bmShortageToggle" onclick="_bmToggleShortageView(this)" style="font-size:11px">隐藏可调货</button>
+          <button class="btn small" onclick="_bmExportShortage()" style="border-color:var(--danger);color:var(--danger)">📋 导出缺货</button>
+        </div>
+      </div>
+      <!-- 账号筛选已移至概览表格 checkbox -->
+      <!-- 补货清单 -->
+      <div class="card" id="bmShortageCard">
+        <table>
+          <thead><tr>
+            <th style="width:48px"></th>
+            <th>物品</th>
+            <th style="width:90px" class="col-num">需要</th>
+            <th style="width:90px" class="col-num">库存</th>
+            <th style="width:120px" class="col-num">缺口</th>
+            <th style="width:80px"></th>
+          </tr></thead>
+          <tbody id="bmShortageBody"></tbody>
+        </table>
+      </div>
+      <!-- 存货分布 -->
+      <div class="card" id="bmInstockCard" style="display:none">
+        <table>
+          <thead><tr>
+            <th style="width:48px"></th>
+            <th>物品</th>
+            <th style="width:70px" class="col-num">当前库存</th>
+            <th style="width:70px" class="col-num">缺口</th>
+            <th>其他账号库存</th>
+            <th style="width:80px"></th>
+          </tr></thead>
+          <tbody id="bmInstockBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 套餐关注设置弹窗 -->
+<div id="bmSettingsModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal('bmSettingsModal')">
+  <div class="modal bm-settings-modal">
+    <div class="bm-settings-header">
+      <h3 style="margin:0">关注设置</h3>
+      <button class="btn" onclick="closeModal('bmSettingsModal');loadBundleMonitor()">完成</button>
+    </div>
+    <div id="bmSettingsContent" style="flex:1;overflow:hidden;display:flex;flex-direction:column"></div>
+  </div>
+</div>
+
+<!-- 导出弹窗 -->
+<div id="bmExportModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal('bmExportModal')">
+  <div class="modal" style="max-width:500px">
+    <h2 id="bmExportTitle">导出</h2>
+    <div id="bmExportBody"></div>
+  </div>
+</div>
+
+<!-- ── 订单 ── -->
+<div id="page-orders" class="page">
+  <div class="topbar">
+    <div class="tag-bar" style="flex:1">
+      <button class="tag-btn active" id="otab_pending"   onclick="setOrderTab('pending',this)">⏳ 待处理</button>
+      <button class="tag-btn"        id="otab_completed" onclick="setOrderTab('completed',this)">✓ 已完成</button>
+      <button class="tag-btn"        id="otab_cancelled" onclick="setOrderTab('archived',this)">📁 已归档</button>
+      <span id="completedFilters" style="display:none;margin-left:12px;display:none;gap:4px;align-items:center">
+        <span style="width:1px;height:16px;background:var(--border);margin:0 4px"></span>
+        <button class="tag-btn active" onclick="setCompletedDays(0,this)">全部</button>
+        <button class="tag-btn" onclick="setCompletedDays(1,this)">今天</button>
+        <button class="tag-btn" onclick="setCompletedDays(3,this)">3天</button>
+        <button class="tag-btn" onclick="setCompletedDays(7,this)">7天</button>
+        <button class="tag-btn" onclick="setCompletedDays(30,this)">30天</button>
+        <span style="width:1px;height:16px;background:var(--border);margin:0 4px"></span>
+        <input type="date" id="orderDateFrom" style="width:120px;padding:4px 6px;font-size:11px" onchange="setCompletedRange()">
+        <span style="color:var(--text3);font-size:11px">—</span>
+        <input type="date" id="orderDateTo" style="width:120px;padding:4px 6px;font-size:11px" onchange="setCompletedRange()">
+      </span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn small" id="exportDailyBtn" style="display:none;border-color:var(--accent);color:var(--accent)" onclick="exportDailyReport()">📄 导出日报</button>
+      <button class="btn primary" onclick="openNewOrder()">+ 新建订单</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="card" style="margin-bottom:20px">
+      <table>
+        <thead><tr>
+          <th style="width:36px"><input type="checkbox" id="orderCheckAll" onchange="toggleAllOrders(this.checked)" title="全选/取消全选" style="width:auto"></th>
+          <th style="width:80px;white-space:nowrap"># <label style="font-weight:400;font-size:11px;color:var(--text3);margin-left:6px;cursor:pointer"><input type="checkbox" id="orderMultiSelect" onchange="toggleOrderMultiSelect(this.checked)" style="width:auto;vertical-align:middle;cursor:pointer"> 多选</label></th>
+          <th>客户 / 物品</th>
+          <th style="width:50px" class="col-num">数量</th>
+          <th style="width:80px" class="col-num">成本</th>
+          <th style="width:80px" class="col-num">售价</th>
+          <th style="width:80px" class="col-num">利润</th>
+          <th style="width:130px">时间</th>
+          <th style="width:160px"></th>
+        </tr></thead>
+        <tbody id="ordersBody"></tbody>
+      </table>
+    </div>
+    <div id="shortageSection">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="tag-btn active" id="tabShortage" onclick="switchListTab('shortage')">补货清单</button>
+        <button class="tag-btn" id="tabInstock" onclick="switchListTab('instock')">存货分布</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="tag-btn active" id="shortageToggle" onclick="toggleShortageView(this)" style="font-size:11px">只看缺货</button>
+        <button class="btn small" onclick="exportShortageText()" style="border-color:var(--danger);color:var(--danger)">📋 导出缺货</button>
+      </div>
+    </div>
+    <!-- 账号筛选栏 -->
+    <div id="stockAccountBar" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:8px 12px;background:var(--bg1);border:1px solid var(--border);border-radius:8px">
+      <span style="font-size:11px;color:var(--text3);margin-right:4px;white-space:nowrap">选择账号：</span>
+    </div>
+    <!-- 补货清单 -->
+    <div class="card" id="shortageCard">
+      <table>
+        <thead><tr>
+          <th style="width:48px"></th>
+          <th>物品</th>
+          <th>英文名</th>
+          <th style="width:90px" class="col-num">需要</th>
+          <th style="width:90px" class="col-num">库存</th>
+          <th style="width:80px" class="col-num">缺口</th>
+          <th>来源订单</th>
+          <th style="width:80px"></th>
+        </tr></thead>
+        <tbody id="shortageBody"></tbody>
+      </table>
+    </div>
+    <!-- 存货分布 -->
+    <div class="card" id="instockCard" style="display:none">
+      <table>
+        <thead><tr>
+          <th style="width:48px"></th>
+          <th style="width:140px">物品</th>
+          <th style="width:55px" class="col-num">需要</th>
+          <th style="width:55px" class="col-num">总库存</th>
+          <th>各账号库存</th>
+          <th style="width:140px">来源订单</th>
+        </tr></thead>
+        <tbody id="instockBody"></tbody>
+      </table>
+    </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 套餐 ── -->
+<div id="page-bundles" class="page">
+  <div class="topbar" style="flex-wrap:wrap;gap:8px">
+    <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+      <input type="text" id="bundleSearchInput" placeholder="搜索套餐..." oninput="filterBundles()"
+        style="width:180px;flex-shrink:0;font-size:12px;padding:4px 10px;border-radius:6px">
+      <div id="bundleTagBar" class="tag-bar" style="flex:1;min-width:0;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;-ms-overflow-style:none"></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-shrink:0;align-items:center">
+      <span id="bundleCount" style="font-size:12px;color:var(--text3);white-space:nowrap"></span>
+      <button class="btn primary" onclick="openBundleEditor()">+ 新建套餐</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="card">
+      <table>
+        <thead><tr>
+          <th style="width:40px">#</th>
+          <th style="width:160px">套餐名</th>
+          <th>别名</th>
+          <th>包含物品</th>
+          <th style="width:80px">来源</th>
+          <th style="width:80px"></th>
+        </tr></thead>
+        <tbody id="bundlesBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── 物品库 ── -->
+<div id="page-items" class="page">
+  <div id="itemFilterBar" style="flex-shrink:0;border-bottom:1px solid var(--border);background:var(--bg1)"></div>
+  <div style="padding:0 24px;height:36px;border-bottom:1px solid var(--border);background:var(--bg1);display:flex;align-items:center;flex-shrink:0">
+    <span style="font-size:12px;color:var(--text3)">点击名称可直接编辑 · 点击「+」可添加别名</span>
+  </div>
+  <div class="content">
+    <div class="card">
+      <table>
+        <thead><tr>
+          <th style="width:40px">#</th>
+          <th style="width:48px"></th>
+          <th style="width:240px">名称</th>
+          <th>搜索别名</th>
+          <th style="width:80px">稀有度</th>
+        </tr></thead>
+        <tbody id="itemsBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── 客户 ── -->
+<div id="page-customers" class="page">
+  <div class="topbar">
+    <div class="page-title">客户</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span id="customerCount" style="font-size:12px;color:var(--text3)"></span>
+      <select id="customerDaysFilter" onchange="loadCustomers()" style="width:90px">
+        <option value="7">近7天</option>
+        <option value="30">近30天</option>
+        <option value="90">近90天</option>
+        <option value="365">近一年</option>
+      </select>
+    </div>
+  </div>
+  <div class="content">
+    <div class="card">
+      <table>
+        <thead><tr>
+          <th style="width:40px">#</th>
+          <th>客户名</th>
+          <th style="width:80px" class="col-num">订单数</th>
+          <th style="width:110px" class="col-num">总消费</th>
+          <th style="width:140px">最近下单</th>
+          <th style="width:80px"></th>
+        </tr></thead>
+        <tbody id="customersBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── 账号 ── -->
+<div id="page-accounts" class="page">
+  <div class="topbar">
+    <div class="page-title">账号</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div id="cookieStatus" style="font-size:11px;color:var(--text3)"></div>
+      <select id="accountSort" onchange="loadAccounts()" style="width:110px;font-size:12px;padding:5px 8px">
+        <option value="name">按名称</option>
+        <option value="status">按状态</option>
+      </select>
+      <button class="btn" onclick="autoLoginBatchRefresh()" title="使用保存的浏览器会话批量刷新所有账号Cookie" style="border-color:var(--warning);color:var(--warning)">⚡ 批量刷新</button>
+      <button class="btn primary" onclick="openAccountEditor()">+ 添加账号</button>
+    </div>
+  </div>
+  <div class="content">
+    <div id="cookieAlert" style="display:none;margin-bottom:12px;padding:12px 16px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:8px;font-size:13px;color:var(--warning)">
+      ⚠ 检测到同步错误，Cookie 可能已过期。点击 ⚡批量刷新 自动更新，或点各账号旁的 🔗 手动登录。
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr>
+          <th style="width:36px">#</th>
+          <th style="width:140px">账号</th>
+          <th style="width:130px">备注</th>
+          <th style="width:70px">槽位</th>
+          <th style="width:130px">最后同步</th>
+          <th style="width:90px">同步状态</th>
+          <th style="width:56px;text-align:center">启停</th>
+          <th style="width:70px;text-align:center">自动同步</th>
+          <th style="width:56px;text-align:center">同步</th>
+          <th style="width:90px;text-align:center">登录</th>
+          <th style="width:50px;text-align:center"></th>
+        </tr></thead>
+        <tbody id="accountsBody"></tbody>
+      </table>
+    </div>
+    <!-- AI 设置 -->
+    <div class="card" style="margin-top:16px">
+      <div style="padding:16px 20px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <span style="font-weight:600;font-size:14px">AI 匹配设置</span>
+          <span id="aiStatusBadge" style="font-size:11px;padding:2px 8px;border-radius:4px;background:var(--bg2);color:var(--text3)">检查中...</span>
+        </div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:12px">
+          配置 Claude API Key 后，订单解析会自动对低分匹配项调用 AI 增强。未配置时使用纯本地模糊匹配。
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="password" id="aiApiKeyInput" placeholder="sk-ant-api03-..." style="flex:1;max-width:400px;font-size:12px;padding:6px 10px">
+          <button class="btn primary" onclick="saveAiKey()" style="flex-shrink:0">保存</button>
+          <button class="btn danger" onclick="deleteAiKey()" style="flex-shrink:0">清除</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end .main -->
+</div><!-- end .app -->
+
+<!-- ══════════ MODALS ══════════ -->
+
+<!-- 新建订单（粘贴文本 + 解析确认，两步合一） -->
+<div class="modal-overlay" id="orderModal" style="display:none" onclick="if(event.target===this)closeModal('orderModal')">
+  <div class="modal" style="width:1100px;max-width:98vw;max-height:95vh;overflow-y:auto">
+    <h3>新建订单</h3>
+    <!-- 第一步：粘贴文本 -->
+    <div id="parseStep">
+      <div class="form-row">
+        <label class="form-label" style="margin-bottom:6px">粘贴订单文本 <span style="color:var(--text3);font-weight:400;font-size:12px">（直接粘贴商家发来的原始内容）</span></label>
+        <textarea id="orderRawText" rows="10" style="width:100%;resize:vertical;font-size:12px;line-height:1.8;font-family:monospace"
+          placeholder="区服：全服 / 蓝图名称：【蓝图】火山购买数量：1 组&#10;名称:[蓝图] 风暴 购买数量: 1 组&#10;...&#10;&#10;按 Ctrl+Enter 解析"
+          onkeydown="if(event.ctrlKey&&event.key==='Enter'){event.preventDefault();parseOrderText()}"></textarea>
+      </div>
+      <div class="form-actions">
+        <button class="btn" onclick="closeModal('orderModal')">取消</button>
+        <button class="btn primary" onclick="parseOrderText()">解析 →</button>
+      </div>
+    </div>
+    <!-- 第二步：确认匹配 -->
+    <div id="confirmStep" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:12px;color:var(--text3)">
+          ✓ 绿色边框 = 已匹配 &nbsp;⚠ 红色边框 = 需手动选择 &nbsp; 点击物品可切换候选
+        </div>
+        <div id="parsedCustomer" style="font-size:12px;color:var(--accent)"></div>
+      </div>
+      <div id="parsedPreview" style="max-height:560px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:0"></div>
+      <div class="form-actions" style="margin-top:12px">
+        <button class="btn" onclick="document.getElementById('parseStep').style.display='';document.getElementById('confirmStep').style.display='none'">← 重新粘贴</button>
+        <button class="btn" onclick="closeModal('orderModal')">取消</button>
+        <button class="btn primary" onclick="confirmOrder()">确认创建</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 订单详情 -->
+<div id="orderDetailModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal('orderDetailModal')">
+  <div class="modal" style="width:800px;position:relative">
+    <button onclick="closeModal('orderDetailModal')" style="position:absolute;top:12px;right:12px;background:var(--bg2);border:1px solid var(--border2);color:var(--text1);font-size:18px;cursor:pointer;padding:4px 10px;line-height:1;border-radius:6px;transition:all .12s;z-index:1" onmouseover="this.style.borderColor='var(--danger)';this.style.color='var(--danger)';this.style.background='rgba(240,68,68,.08)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text1)';this.style.background='var(--bg2)'">✕</button>
+    <div id="orderDetailContent"></div>
+  </div>
+</div>
+
+<!-- 套餐编辑 -->
+<div id="bundleEditorModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal('bundleEditorModal')">
+  <div class="modal" style="width:780px;max-width:95vw">
+    <h3 id="bundleEditorTitle">新建套餐</h3>
+    <div class="form-row">
+      <label class="form-label">套餐名称</label>
+      <input type="text" id="bundleName" placeholder="套餐名称..." onkeydown="if(event.key==='Enter'){event.preventDefault();saveBundle()}">
+    </div>
+    <div class="form-row">
+      <label class="form-label">套餐类型</label>
+      <div id="bundleTypeSelector" style="display:flex;gap:6px">
+        <button class="btn small active" data-type="item" onclick="setBundleType('item')">物品套餐</button>
+        <button class="btn small" data-type="service" onclick="setBundleType('service')">服务套餐</button>
+        <button class="btn small" data-type="mixed" onclick="setBundleType('mixed')">混合套餐</button>
+      </div>
+    </div>
+    <div id="bundleItemsSection" class="form-row">
+      <label class="form-label">已选物品</label>
+      <div id="bundleItemsEditor"></div>
+      <div id="bundleItemsEmpty" style="font-size:12px;color:var(--text3);padding:6px 0;display:none">点击下方物品添加到套餐</div>
+      <label class="form-label" style="margin-top:12px">物品库</label>
+      <div id="bundleItemBrowser" style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
+        <div id="bundleItemFilterBar" style="padding:8px 10px;background:var(--bg2);border-bottom:1px solid var(--border)"></div>
+        <div id="bundleItemGrid" style="height:240px;overflow-y:auto;background:var(--bg1)"></div>
+      </div>
+    </div>
+    <div id="bundleServiceSection" class="form-row" style="display:none">
+      <label class="form-label">售价</label>
+      <input type="number" id="bundlePrice" placeholder="套餐售价..." step="0.01" min="0" style="width:160px"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();saveBundle()}">
+    </div>
+    <div id="bundleDescSection" class="form-row" style="display:none">
+      <label class="form-label">服务描述</label>
+      <textarea id="bundleDescription" placeholder="描述服务内容..." rows="3" style="resize:vertical;font-size:13px"></textarea>
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeModal('bundleEditorModal')">取消</button>
+      <button class="btn primary" onclick="saveBundle()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 添加账号 -->
+<div id="accountEditorModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal('accountEditorModal')">
+  <div class="modal" style="width:380px">
+    <h3 id="accountEditorTitle" style="text-align:center;margin-bottom:20px">添加账号</h3>
+    <div class="form-row">
+      <label class="form-label">账号名称</label>
+      <input type="text" id="accName" placeholder="输入账号名称…"
+        onkeydown="if(event.key==='Enter'){document.getElementById('accNote').focus()}">
+    </div>
+    <div class="form-row">
+      <label class="form-label">备注 <span style="color:var(--text3);font-weight:400">（可选）</span></label>
+      <input type="text" id="accNote" placeholder="如：小号、专门囤货…"
+        onkeydown="if(event.key==='Enter'){saveAccount()}">
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5">
+      添加后点击账号旁的 🔗 手动登录获取 Cookie，设置凭据后可用 ⚡ 自动刷新
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeModal('accountEditorModal')">取消</button>
+      <button class="btn primary" onclick="saveAccount()">确认添加</button>
+    </div>
+  </div>
+</div>
+
+<!-- arctracker 凭据 -->
+<div id="arcCredModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal('arcCredModal')">
+  <div class="modal" style="width:380px">
+    <h3 id="arcCredTitle" style="text-align:center;margin-bottom:20px">设置 arctracker 凭据</h3>
+    <input type="hidden" id="arcCredAccountId">
+    <div class="form-row">
+      <label class="form-label">arctracker 邮箱</label>
+      <input type="email" id="arcCredEmail" placeholder="arctracker.io 登录邮箱"
+        onkeydown="if(event.key==='Enter'){document.getElementById('arcCredPassword').focus()}">
+    </div>
+    <div class="form-row">
+      <label class="form-label">arctracker 密码</label>
+      <input type="password" id="arcCredPassword" placeholder="arctracker.io 登录密码"
+        onkeydown="if(event.key==='Enter'){saveArcCredentials()}">
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5">
+      设置后点 ⚡ 自动登录即可无头刷新 Cookie 和 Steam 关联
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeModal('arcCredModal')">取消</button>
+      <button class="btn primary" onclick="saveArcCredentials()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 客户详情 -->
+<div id="customerDetailModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal('customerDetailModal')">
+  <div class="modal" style="width:700px">
+    <div id="customerDetailContent"></div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeModal('customerDetailModal')">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SCRIPTS ══════════ -->
+<script src="/static/js/common.js"></script>
+<script src="/static/js/dashboard.js"></script>
+<script src="/static/js/inventory.js"></script>
+<script src="/static/js/shortage.js"></script>
+<script src="/static/js/order_parse.js"></script>
+<script src="/static/js/orders.js"></script>
+
+<div id="shortageModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal('shortageModal')">
+  <div class="modal" style="max-width:520px">
+    <h2 id="shortageModalTitle" style="margin-bottom:12px"></h2>
+    <div id="shortageModalBody"></div>
+  </div>
+</div>
+
+<!-- 关注规则编辑弹窗 -->
+<div id="watchRuleModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal('watchRuleModal')">
+  <div class="modal" style="max-width:900px;width:900px;height:80vh;display:flex;flex-direction:column;padding:0;overflow:hidden">
+    <!-- 固定头部 -->
+    <div style="flex-shrink:0;padding:20px 24px 0 24px">
+      <h2 style="margin-bottom:12px">添加监控规则</h2>
+      <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap">
+        <div style="min-width:160px;flex:1">
+          <label style="font-size:12px;color:var(--text2);margin-bottom:4px;display:block">账号</label>
+          <select id="watchRuleAccount" style="width:100%;font-size:13px;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text1)"></select>
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--text2);margin-bottom:4px;display:block">告警阈值</label>
+          <div style="position:relative;display:inline-block">
+            <input type="number" id="watchRuleThreshold" value="1" min="0"
+              style="width:80px;font-size:13px;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);transition:border-color .3s,box-shadow .3s"
+              onblur="wrThresholdFeedback(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();wrThresholdFeedback(this)}">
+            <span id="wrThresholdCheck" style="position:absolute;right:-22px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--success);opacity:0;transition:opacity .3s">✓</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="tag-btn active" id="wrType_item" onclick="setWatchRuleType('item')">单个物品</button>
+          <button class="tag-btn" id="wrType_type" onclick="setWatchRuleType('type')">按类型</button>
+          <button class="tag-btn" id="wrType_bundle" onclick="setWatchRuleType('bundle')">套餐</button>
+        </div>
+      </div>
+    </div>
+    <!-- 筛选区（固定） -->
+    <div id="wrFilterSection" style="flex-shrink:0;padding:12px 24px;border-bottom:1px solid var(--border)"></div>
+    <!-- 已选物品栏（固定） -->
+    <div id="wrSelectedBar" style="flex-shrink:0;padding:0 24px;display:none">
+      <div id="wrSelectedItems" style="display:flex;flex-wrap:wrap;gap:4px;padding:8px 0;border-bottom:1px solid var(--border)"></div>
+    </div>
+    <!-- 可滚动的结果区 -->
+    <div id="wrResultsArea" style="flex:1;overflow-y:auto;padding:12px 24px"></div>
+    <!-- 底部操作栏（固定） -->
+    <div style="flex-shrink:0;display:flex;gap:8px;justify-content:flex-end;padding:12px 24px;border-top:1px solid var(--border)">
+      <button class="btn" onclick="saveWatchRule()">确认添加</button>
+      <button class="btn" onclick="closeModal('watchRuleModal')">取消</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/bundle_monitor.js"></script>
+<script src="/static/js/bundles.js"></script>
+<script src="/static/js/watchlist.js"></script>
+<script src="/static/js/items.js"></script>
+<script src="/static/js/customers.js"></script>
+<script src="/static/js/accounts.js"></script>
+<script>loadDashboard();</script>
+</body>
+</html>

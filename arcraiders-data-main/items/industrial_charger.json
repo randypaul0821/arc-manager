@@ -1,0 +1,63 @@
+{
+  "id": "industrial_charger",
+  "name": {
+    "da": "Industriel Oplader",
+    "de": "Industrie-Ladegerät",
+    "en": "Industrial Charger",
+    "es": "Cargador Industrial",
+    "fr": "Chargeur Industriel",
+    "he": "מטען תעשייתי",
+    "hr": "Industrijski punjač",
+    "it": "Caricatore Industriale",
+    "ja": "産業用充電器",
+    "ko-KR": "산업용 충전기",
+    "no": "Industriell Lader",
+    "pl": "Ładowarka Przemysłowa",
+    "pt": "Carregador Industrial",
+    "pt-BR": "Carregador Industrial",
+    "ru": "Промышленное зарядное устройство",
+    "sr": "Industrijski punjač",
+    "tr": "Endüstriyel Şarj Aleti",
+    "uk": "Промислове зарядний пристрій",
+    "zh-CN": "工业充电器",
+    "zh-TW": "工業充電器"
+  },
+  "description": {
+    "da": "Kan genbruges til håndværksmaterialer.",
+    "de": "Kann zu Herstellungsmaterialien recycelt werden.",
+    "en": "Can be recycled into crafting materials.",
+    "es": "Puede reciclarse en materiales de fabricación.",
+    "fr": "Peut être recyclé en matériaux d'artisanat.",
+    "he": "ניתן למחזור לחומרי יצירה.",
+    "hr": "Može se reciklirati u materijale za izradu.",
+    "it": "Si può riciclare in materiali da creazione.",
+    "ja": "製作素材にリサイクルできる。",
+    "ko-KR": "제작 재료로 재활용할 수 있습니다.",
+    "no": "Kan resirkuleres til håndverksmateriell.",
+    "pl": "Można przetworzyć na materiały rzemieślnicze.",
+    "pt": "Pode ser reciclado em materiais de fabricação.",
+    "pt-BR": "Pode ser reciclado em materiais de criação.",
+    "ru": "Можно переработать в материалы для крафта.",
+    "sr": "Može se reciklirati u materijale za izradu.",
+    "tr": "Üretim malzemelerine geri dönüştürülebilir.",
+    "uk": "Можна переробити на матеріали для крафту.",
+    "zh-CN": "可以回收成制作材料。",
+    "zh-TW": "可以回收成製作材料。"
+  },
+  "type": "Recyclable",
+  "rarity": "Rare",
+  "foundIn": "Industrial",
+  "value": 1000,
+  "weightKg": 2,
+  "stackSize": 3,
+  "recyclesInto": {
+    "metal_parts": 5,
+    "voltage_converter": 1
+  },
+  "salvagesInto": {
+    "voltage_converter": 1
+  },
+  "imageFilename": "https://cdn.arctracker.io/items/industrial_charger.png",
+  "updatedAt": "10/30/2025",
+  "addedIn": "base"
+}

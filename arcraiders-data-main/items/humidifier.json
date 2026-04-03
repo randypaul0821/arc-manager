@@ -1,0 +1,63 @@
+{
+  "id": "humidifier",
+  "name": {
+    "da": "Luftfugter",
+    "de": "Luftbefeuchter",
+    "en": "Humidifier",
+    "es": "Humidificador",
+    "fr": "Humidificateur",
+    "he": "מכשיר אדים",
+    "hr": "Ovlaživač zraka",
+    "it": "Umidificatore",
+    "ja": "加湿器",
+    "ko-KR": "가습기",
+    "no": "Luftfukter",
+    "pl": "Nawilżacz",
+    "pt": "Umidificador",
+    "pt-BR": "Umidificador",
+    "ru": "Увлажнитель",
+    "sr": "Ovlaživač vazduha",
+    "tr": "Nemlendirici",
+    "uk": "Зволожувач",
+    "zh-CN": "加湿器",
+    "zh-TW": "加濕器"
+  },
+  "description": {
+    "da": "Kan genbruges til håndværksmaterialer.",
+    "de": "Kann zu Herstellungsmaterialien recycelt werden.",
+    "en": "Can be recycled into crafting materials.",
+    "es": "Puede reciclarse en materiales de fabricación.",
+    "fr": "Peut être recyclé en matériaux d'artisanat.",
+    "he": "ניתן למיחזור לחומרי יצירה.",
+    "hr": "Može se reciklirati u materijale za izradu.",
+    "it": "Si può riciclare in materiali da creazione.",
+    "ja": "製作素材にリサイクルできる。",
+    "ko-KR": "제작 재료로 재활용할 수 있습니다.",
+    "no": "Kan resirkuleres til håndverksmateriell.",
+    "pl": "Można przetworzyć na materiały rzemieślnicze.",
+    "pt": "Pode ser reciclado em materiais de fabricação.",
+    "pt-BR": "Pode ser reciclado em materiais de fabricação.",
+    "ru": "Можно переработать в материалы для крафта.",
+    "sr": "Može se reciklirati u materijale za izradu.",
+    "tr": "Üretim malzemelerine geri dönüştürülebilir.",
+    "uk": "Можна переробити на матеріали для крафту.",
+    "zh-CN": "可以回收成制作材料。",
+    "zh-TW": "可以回收成製作材料。"
+  },
+  "type": "Recyclable",
+  "rarity": "Rare",
+  "foundIn": "Residential",
+  "value": 1000,
+  "weightKg": 2,
+  "stackSize": 3,
+  "recyclesInto": {
+    "canister": 2,
+    "wires": 2
+  },
+  "salvagesInto": {
+    "canister": 2
+  },
+  "imageFilename": "https://cdn.arctracker.io/items/humidifier.png",
+  "updatedAt": "01/09/2026",
+  "addedIn": "base"
+}

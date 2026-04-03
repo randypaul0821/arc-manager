@@ -1,0 +1,27 @@
+{
+  "id": "workbench",
+  "name": {
+    "da": "Arbejdsbænk",
+    "de": "Werkbank",
+    "en": "Workbench",
+    "es": "Banco de trabajo",
+    "fr": "Établi",
+    "he": "שולחן עבודה",
+    "hr": "Radni Stol",
+    "it": "Banco da Lavoro",
+    "ja": "ワークベンチ",
+    "ko-KR": "작업대",
+    "no": "Arbeidsbenk",
+    "pl": "Stół warsztatowy",
+    "pt": "Bancada de trabalho",
+    "pt-BR": "Bancada",
+    "ru": "Верстак",
+    "sr": "Radni Sto",
+    "tr": "Çalışma Tezgahı",
+    "uk": "Верстат",
+    "zh-CN": "工作台",
+    "zh-TW": "工作台"
+  },
+  "maxLevel": 0,
+  "levels": []
+}

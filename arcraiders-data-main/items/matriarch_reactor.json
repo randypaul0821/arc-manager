@@ -1,0 +1,62 @@
+{
+  "id": "matriarch_reactor",
+  "name": {
+    "da": "Matriarkreactor",
+    "de": "Matriarchenreaktor",
+    "en": "Matriarch Reactor",
+    "es": "Reactor de la Matriarca",
+    "fr": "Réacteur de la Matriarche",
+    "he": "כור Matriarch",
+    "hr": "Matrijarhalni Reaktor",
+    "it": "Reattore della Matriarca",
+    "ja": "マトリアークリアクター",
+    "ko-KR": "퀸 리액터",
+    "no": "Matriarkreactor",
+    "pl": "Reaktor Matriarchy",
+    "pt": "Reator da Matriarca",
+    "pt-BR": "Reator da Matriarca",
+    "ru": "Реактор Матриарха",
+    "sr": "Matrijarhalni Reaktor",
+    "tr": "Maderşah Reaktörü",
+    "uk": "Реактор Матріарха",
+    "zh-CN": "母巢反应堆",
+    "zh-TW": "母巢反應爐"
+  },
+  "description": {
+    "da": "Kan genbruges til håndværksmaterialer.",
+    "de": "Kann zu Herstellungsmaterialien recycelt werden.",
+    "en": "Can be recycled into crafting materials.",
+    "es": "Puede reciclarse en materiales de fabricación.",
+    "fr": "Peut être recyclé en matériaux d'artisanat.",
+    "he": "ניתן למחזר לחומרי יצירה.",
+    "hr": "Može se reciklirati u materijale za izradu.",
+    "it": "Si può riciclare in materiali da creazione.",
+    "ja": "クラフト素材にリサイクルできます。",
+    "ko-KR": "제작 재료로 재활용할 수 있습니다.",
+    "no": "Kan resirkuleres til håndverksmaterialer.",
+    "pl": "Można przetworzyć na materiały do wytwarzania.",
+    "pt": "Pode ser reciclado em materiais de fabricação.",
+    "pt-BR": "Pode ser reciclado em materiais de fabricação.",
+    "ru": "Можно переработать в материалы для крафта.",
+    "sr": "Može se reciklirati u materijale za izradu.",
+    "tr": "Üretim malzemelerine geri dönüştürülebilir.",
+    "uk": "Можна переробити на матеріали для крафту.",
+    "zh-CN": "可回收为制作材料。",
+    "zh-TW": "可回收為製作材料。"
+  },
+  "type": "Recyclable",
+  "rarity": "Legendary",
+  "value": 11000,
+  "weightKg": 10,
+  "stackSize": 1,
+  "recyclesInto": {
+    "magnetic_accelerator": 1,
+    "power_rod": 1
+  },
+  "salvagesInto": {
+    "magnetic_accelerator": 1
+  },
+  "imageFilename": "https://cdn.arctracker.io/items/matriarch_reactor.png",
+  "updatedAt": "02/24/2026",
+  "addedIn": "1.2"
+}

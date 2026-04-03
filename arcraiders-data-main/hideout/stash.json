@@ -1,0 +1,87 @@
+{
+  "id": "stash",
+  "name": {
+    "da": "Opbevaring",
+    "de": "Lager",
+    "en": "Stash",
+    "es": "Alijo",
+    "fr": "Réserve",
+    "he": "מחסן",
+    "hr": "Skladište",
+    "it": "Deposito",
+    "ja": "保管庫",
+    "ko-KR": "보관함",
+    "no": "Oppbevaring",
+    "pl": "Schowek",
+    "pt": "Esconderijo",
+    "pt-BR": "Armazenamento",
+    "ru": "Хранилище",
+    "sr": "Skladište",
+    "tr": "Depo",
+    "uk": "Схованка",
+    "zh-CN": "储备箱",
+    "zh-TW": "儲藏箱"
+  },
+  "maxLevel": 10,
+  "levels": [
+    {
+      "description": "64 slots",
+      "level": 1,
+      "requirementItemIds": []
+    },
+    {
+      "description": "+24 slots (88 total)",
+      "level": 2,
+      "otherRequirements": ["5000 Coins"],
+      "requirementItemIds": []
+    },
+    {
+      "description": "+24 slots (112 total)",
+      "level": 3,
+      "otherRequirements": ["10000 Coins"],
+      "requirementItemIds": []
+    },
+    {
+      "description": "+24 slots (136 total)",
+      "level": 4,
+      "otherRequirements": ["15000 Coins"],
+      "requirementItemIds": []
+    },
+    {
+      "description": "+24 slots (160 total)",
+      "level": 5,
+      "otherRequirements": ["25000 Coins"],
+      "requirementItemIds": []
+    },
+    {
+      "description": "+24 slots (184 total)",
+      "level": 6,
+      "otherRequirements": ["40000 Coins"],
+      "requirementItemIds": []
+    },
+    {
+      "description": "+24 slots (208 total)",
+      "level": 7,
+      "otherRequirements": ["60000 Coins"],
+      "requirementItemIds": []
+    },
+    {
+      "description": "+24 slots (232 total)",
+      "level": 8,
+      "otherRequirements": ["90000 Coins"],
+      "requirementItemIds": []
+    },
+    {
+      "description": "+24 slots (256 total)",
+      "level": 9,
+      "otherRequirements": ["130000 Coins"],
+      "requirementItemIds": []
+    },
+    {
+      "description": "+24 slots (280 total)",
+      "level": 10,
+      "otherRequirements": ["200000 Coins"],
+      "requirementItemIds": []
+    }
+  ]
+}

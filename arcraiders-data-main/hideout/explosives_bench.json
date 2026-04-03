@@ -1,0 +1,75 @@
+{
+  "id": "explosives_bench",
+  "name": {
+    "da": "Sprængstofstation",
+    "de": "Sprengstoffstation",
+    "en": "Explosives Station",
+    "es": "Estación de explosivos",
+    "fr": "Station à explosifs",
+    "he": "עמדת חומרי נפץ",
+    "hr": "Stanica za eksploziv",
+    "it": "Stazione Esplosivi",
+    "ja": "爆発物ステーション",
+    "ko-KR": "폭발물 스테이션",
+    "no": "Eksplosivstasjon",
+    "pl": "Stacja materiałów wybuchowych",
+    "pt": "Estação de explosivos",
+    "pt-BR": "Estação de Explosivos",
+    "ru": "Верстак для взрывчатки",
+    "sr": "Stanica za eksploziv",
+    "tr": "Patlayıcı İstasyonu",
+    "uk": "Станція вибухівки",
+    "zh-CN": "爆炸物工作台",
+    "zh-TW": "爆裂物工作站"
+  },
+  "maxLevel": 3,
+  "levels": [
+    {
+      "level": 1,
+      "requirementItemIds": [
+        {
+          "itemId": "chemicals",
+          "quantity": 50
+        },
+        {
+          "itemId": "arc_alloy",
+          "quantity": 6
+        }
+      ]
+    },
+    {
+      "level": 2,
+      "requirementItemIds": [
+        {
+          "itemId": "synthesized_fuel",
+          "quantity": 3
+        },
+        {
+          "itemId": "crude_explosives",
+          "quantity": 5
+        },
+        {
+          "itemId": "pop_trigger",
+          "quantity": 5
+        }
+      ]
+    },
+    {
+      "level": 3,
+      "requirementItemIds": [
+        {
+          "itemId": "laboratory_reagents",
+          "quantity": 3
+        },
+        {
+          "itemId": "explosive_compound",
+          "quantity": 5
+        },
+        {
+          "itemId": "rocketeer_driver",
+          "quantity": 3
+        }
+      ]
+    }
+  ]
+}

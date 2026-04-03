@@ -1,0 +1,63 @@
+{
+  "id": "cooling_fan",
+  "name": {
+    "da": "Køleventilator",
+    "de": "Kühlungslüfter",
+    "en": "Cooling Fan",
+    "es": "Ventilador de refrigeración",
+    "fr": "Ventilateur de Refroidissement",
+    "he": "מאוורר קירור",
+    "hr": "Rashladni ventilator",
+    "it": "Ventola di raffreddamento",
+    "ja": "冷却ファン",
+    "ko-KR": "냉각 팬",
+    "no": "Kjølevifte",
+    "pl": "Wentylator chłodzący",
+    "pt": "Ventilador de resfriamento",
+    "pt-BR": "Ventilador de Resfriamento",
+    "ru": "Охлаждающий вентилятор",
+    "sr": "Rashladni ventilator",
+    "tr": "Soğutma Fanı",
+    "uk": "Охолоджувальний вентилятор",
+    "zh-CN": "冷却风扇",
+    "zh-TW": "冷卻風扇"
+  },
+  "description": {
+    "da": "Kan genbruges til håndværksmaterialer.",
+    "de": "Kann zu Herstellungsmaterialien recycelt werden.",
+    "en": "Can be recycled into crafting materials.",
+    "es": "Puede reciclarse en materiales de fabricación.",
+    "fr": "Peut être recyclé en matériaux d'artisanat.",
+    "he": "ניתן למיחזור לחומרי יצירה.",
+    "hr": "Može se reciklirati u materijale za izradu.",
+    "it": "Si può riciclare in materiali di fabbricazione.",
+    "ja": "クラフト素材にリサイクルできる。",
+    "ko-KR": "제작 재료로 재활용할 수 있습니다.",
+    "no": "Kan resirkuleres til håndverksmaterialer.",
+    "pl": "Można przetworzyć na materiały rzemieślnicze.",
+    "pt": "Pode ser reciclado em materiais de fabricação.",
+    "pt-BR": "Pode ser reciclado em materiais de fabricação.",
+    "ru": "Можно переработать в материалы для крафта.",
+    "sr": "Može se reciklirati u materijale za izradu.",
+    "tr": "Üretim malzemelerine geri dönüştürülebilir.",
+    "uk": "Можна переробити на матеріали для крафту.",
+    "zh-CN": "可回收为制作材料。",
+    "zh-TW": "可回收為製作材料。"
+  },
+  "type": "Recyclable",
+  "rarity": "Rare",
+  "foundIn": "Technological",
+  "value": 2000,
+  "weightKg": 3,
+  "stackSize": 3,
+  "recyclesInto": {
+    "plastic_parts": 14,
+    "wires": 4
+  },
+  "salvagesInto": {
+    "wires": 4
+  },
+  "imageFilename": "https://cdn.arctracker.io/items/cooling_fan.png",
+  "updatedAt": "01/13/2026",
+  "addedIn": "base"
+}

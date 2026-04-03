@@ -1,0 +1,73 @@
+{
+  "id": "rope",
+  "name": {
+    "da": "Reb",
+    "de": "Seil",
+    "en": "Rope",
+    "es": "Cuerda",
+    "fr": "Corde",
+    "he": "חבל",
+    "hr": "Uže",
+    "it": "Corda",
+    "ja": "縄",
+    "ko-KR": "로프",
+    "no": "Tau",
+    "pl": "Lina",
+    "pt": "Corda",
+    "pt-BR": "Corda",
+    "ru": "Веревка",
+    "sr": "Uže",
+    "tr": "İp",
+    "uk": "Мотузка",
+    "zh-CN": "绳索",
+    "zh-TW": "繩索"
+  },
+  "description": {
+    "da": "Bruges i håndværk. Bruges til at lave: Zipline, Karabinkrog",
+    "de": "Wird bei der Herstellung verwendet. Zur Herstellung von: Seilrutsche, Karabinerhaken",
+    "en": "Used in crafting. Used to craft: Zipline, Snap Hook",
+    "es": "Usado en fabricación. Usado para fabricar: Tirolina, Gancho de Seguridad",
+    "fr": "Utilisé en fabrication. Permet de fabriquer : Tyrolienne, Mousqueton",
+    "he": "משמש ליצירה. משמש ליצירת: אומגה, וו תפיסה",
+    "hr": "Koristi se u izradi. Koristi se za izradu: Zipline, Snap Hook",
+    "it": "Utile per le creazioni. Si usa per creare: Zipline, Gancio a scatto",
+    "ja": "製作に使用。製作可能: Zipline、Snap Hook",
+    "ko-KR": "제작에 사용됩니다. 제작 가능: 집라인, 스냅 훅",
+    "no": "Brukes i håndverk. Brukes til å lage: Zipline, Karabinkrok",
+    "pl": "Używane w rzemiośle. Używane do wytworzenia: Tyrolka, Karabińczyk",
+    "pt": "Usado na fabricação. Usado para fabricar: Tirolesa, Gancho de Segurança",
+    "pt-BR": "Usado na fabricação. Usado para fabricar: Tirolesa, Mosquetão",
+    "ru": "Используется в крафте. Используется для создания: Zipline, Snap Hook",
+    "sr": "Koristi se u izradi. Koristi se za izradu: Zipline, Snap Hook",
+    "tr": "Üretimde kullanılır. Üretilebilir: Zipline, Snap Hook",
+    "uk": "Використовується в крафті. Використовується для створення: Zipline, Snap Hook",
+    "zh-CN": "用于制作。可制作：Zipline、Snap Hook",
+    "zh-TW": "用於製作。可製作：Zipline、Snap Hook"
+  },
+  "type": "Topside Material",
+  "rarity": "Rare",
+  "foundIn": "Residential, Commercial",
+  "value": 500,
+  "weightKg": 0.3,
+  "stackSize": 5,
+  "recyclesInto": {
+    "fabric": 5
+  },
+  "salvagesInto": {
+    "fabric": 2
+  },
+  "imageFilename": "https://cdn.arctracker.io/items/rope.png",
+  "updatedAt": "03/22/2026",
+  "addedIn": "base",
+  "vendors": [
+    {
+      "cost": {
+        "assorted_seeds": 10
+      },
+      "limit": 5,
+      "refreshSeconds": 86400,
+      "requiredLevel": 12,
+      "trader": "Celeste"
+    }
+  ]
+}

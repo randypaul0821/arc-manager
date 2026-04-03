@@ -1,0 +1,98 @@
+{
+  "id": "photoelectric_cloak",
+  "name": {
+    "da": "Fotoelektrisk kappe",
+    "de": "Fotoelektrischer Umhang",
+    "en": "Photoelectric Cloak",
+    "es": "Capa fotoeléctrica",
+    "fr": "Cape Photoélectrique",
+    "he": "גלימה פוטואלקטרית",
+    "hr": "Fotoelektrični Ogrtač",
+    "it": "Mantello fotoelettrico",
+    "ja": "光電子マント",
+    "ko-KR": "광전 망토",
+    "no": "Fotoelektrisk kappe",
+    "pl": "Płaszcz fotoelektryczny",
+    "pt": "Capa fotoelétrica",
+    "pt-BR": "Capa Fotoelétrica",
+    "ru": "Фотоэлектрический плащ",
+    "sr": "Fotoelektrični Ogrtač",
+    "tr": "Fotoelektrikli Örtü",
+    "uk": "Фотоелектричний плащ",
+    "zh-CN": "光电斗篷",
+    "zh-TW": "光電斗篷"
+  },
+  "description": {
+    "da": "En gadget, der giver brugeren mulighed for at skjule sig fra ARC.",
+    "de": "Ein Gadget, mit dem der Benutzer sich vor ARC verstecken kann.",
+    "en": "A gadget that allows the user to conceal themselves from ARC.",
+    "es": "Un dispositivo que permite al usuario ocultarse de ARC.",
+    "fr": "Un gadget qui permet d'échapper à la vigilance de l'ARC.",
+    "he": "גאדג'ט המאפשר למשתמש להסתיר את עצמו מ-ARC.",
+    "hr": "Naprava koja omogućuje korisniku da se sakrije od ARC-a.",
+    "it": "Un dispositivo che consente all'utente di nascondersi da ARC.",
+    "ja": "ARCから身を隠すことができるガジェット。",
+    "ko-KR": "사용자가 아크로부터 자신을 숨길 수 있는 장치입니다.",
+    "no": "En gadget som lar brukeren skjule seg fra ARC.",
+    "pl": "Gadżet, który pozwala użytkownikowi ukryć się przed ARC.",
+    "pt": "Um dispositivo que permite ao usuário se ocultar do ARC.",
+    "pt-BR": "Acessório que permite que o usuário se esconda da ARC.",
+    "ru": "Гаджет, позволяющий пользователю скрыться от ARC.",
+    "sr": "Naprava koja omogućava korisniku da se sakrije od ARC-a.",
+    "tr": "Kullanıcının kendini ARC'den gizlemesini sağlayan bir alet.",
+    "uk": "Гаджет, що дозволяє користувачу сховатися від ARC.",
+    "zh-CN": "能让使用者躲避ARC的装置。",
+    "zh-TW": "能讓使用者躲避ARC的裝置。"
+  },
+  "type": "Quick Use",
+  "rarity": "Epic",
+  "value": 5000,
+  "weightKg": 1,
+  "stackSize": 1,
+  "effects": {
+    "Durability": {
+      "value": "100/100",
+      "da": "Holdbarhed",
+      "de": "Haltbarkeit",
+      "en": "Durability",
+      "es": "Durabilidad",
+      "fr": "Durabilité",
+      "he": "עמידות",
+      "hr": "Izdržljivost",
+      "it": "Tenuta",
+      "ja": "耐久力",
+      "ko-KR": "내구도",
+      "no": "Holdbarhet",
+      "pl": "Wytrzymałość",
+      "pt": "Durabilidade",
+      "pt-BR": "Durabilidade",
+      "ru": "Прочность",
+      "sr": "Izdržljivost",
+      "tr": "Dayanıklılık",
+      "uk": "Міцність",
+      "zh-CN": "耐久度",
+      "zh-TW": "耐久度"
+    }
+  },
+  "craftBench": "utility_bench",
+  "stationLevelRequired": 3,
+  "recipe": {
+    "advanced_electrical_components": 2,
+    "speaker_component": 4
+  },
+  "recyclesInto": {
+    "advanced_electrical_components": 1,
+    "speaker_component": 1
+  },
+  "salvagesInto": {
+    "advanced_electrical_components": 1
+  },
+  "imageFilename": "https://cdn.arctracker.io/items/photoelectric_cloak.png",
+  "updatedAt": "02/24/2026",
+  "addedIn": "base",
+  "repairCost": {
+    "advanced_electrical_components": 1,
+    "speaker_component": 2
+  },
+  "repairDurability": 0.5
+}

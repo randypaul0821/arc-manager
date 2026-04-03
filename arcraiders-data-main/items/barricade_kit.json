@@ -1,0 +1,126 @@
+{
+  "id": "barricade_kit",
+  "name": {
+    "da": "Barrikade-sæt",
+    "de": "Barrikadenset",
+    "en": "Barricade Kit",
+    "es": "Kit de barricada",
+    "fr": "Kit de Barricade",
+    "he": "ערכת מחסום",
+    "hr": "Komplet za Barikadu",
+    "it": "Kit barricata",
+    "ja": "バリケードキット",
+    "ko-KR": "바리케이드 키트",
+    "no": "Barrikade-sett",
+    "pl": "Zestaw barykady",
+    "pt": "Kit de barricada",
+    "pt-BR": "Kit de Barricada",
+    "ru": "Набор баррикад",
+    "sr": "Komplet za Barikadu",
+    "tr": "Barikat Kiti",
+    "uk": "Набір барикад",
+    "zh-CN": "路障工具",
+    "zh-TW": "路障套組"
+  },
+  "description": {
+    "da": "En udplaceringsdækning, der kan blokere indgående skade, indtil den går i stykker.",
+    "de": "Eine einsetzbare Deckung, die Schaden abfängt, bis sie zerstört wird.",
+    "en": "A deployable cover that can block incoming damage until it breaks.",
+    "es": "Una cobertura desplegable que puede bloquear el daño entrante hasta que se rompa.",
+    "fr": "Un abri déployable qui bloque les dégâts jusqu'à sa destruction.",
+    "he": "מחסה ניתן לפריסה החוסם נזק נכנס עד שהוא נשבר.",
+    "hr": "Pokretni zaklon koji može blokirati dolaznu štetu dok se ne slomi.",
+    "it": "Una copertura schierabile che può bloccare i danni in arrivo finché non si rompe.",
+    "ja": "展開可能な遮蔽物。破壊されるまで攻撃を防ぐことができる。",
+    "ko-KR": "배치 가능한 엄폐물로, 파괴될 때까지 들어오는 피해를 막아줍니다.",
+    "no": "En utplasserbar dekning som kan blokkere innkommende skade til den går i stykker.",
+    "pl": "Rozmieszczalna osłona, która może blokować nadchodzące obrażenia, dopóki się nie zniszczy.",
+    "pt": "Uma cobertura implantável que pode bloquear dano recebido até quebrar.",
+    "pt-BR": "Proteção portátil capaz de bloquear danos recebidos até se quebrar.",
+    "ru": "Развёртываемое укрытие, которое блокирует входящий урон до разрушения.",
+    "sr": "Pokretni zaklon koji može blokirati dolaznu štetu dok se ne slomi.",
+    "tr": "Kırılana kadar gelen hasarı engelleyebilen konuşlandırılabilir bir siper.",
+    "uk": "Розгортаюче укриття, яке блокує вхідну шкоду до руйнування.",
+    "zh-CN": "可部署的掩体，能够阻挡伤害直到被摧毁。",
+    "zh-TW": "可部署的掩體，能夠阻擋傷害直到被摧毀。"
+  },
+  "type": "Quick Use",
+  "rarity": "Uncommon",
+  "value": 640,
+  "weightKg": 0.4,
+  "stackSize": 3,
+  "blueprintLocked": true,
+  "effects": {
+    "Duration": {
+      "value": "500 Health",
+      "da": "Varighed",
+      "de": "Dauer",
+      "en": "Duration",
+      "es": "Duración",
+      "fr": "Durée",
+      "he": "משך",
+      "hr": "Trajanje",
+      "it": "Durata",
+      "ja": "持続時間",
+      "ko-KR": "지속 시간",
+      "no": "Varighet",
+      "pl": "Czas trwania",
+      "pt": "Duração",
+      "pt-BR": "Duração",
+      "ru": "Длительность",
+      "sr": "Trajanje",
+      "tr": "Süre",
+      "uk": "Тривалість",
+      "zh-CN": "持续时间",
+      "zh-TW": "持續時間"
+    },
+    "Health": {
+      "value": 500,
+      "da": "Helbred",
+      "de": "Gesundheit",
+      "en": "Health",
+      "es": "Salud",
+      "fr": "Santé",
+      "he": "בריאות",
+      "hr": "Zdravlje",
+      "it": "Salute",
+      "ja": "体力",
+      "ko-KR": "체력",
+      "no": "Helse",
+      "pl": "Zdrowie",
+      "pt": "Saúde",
+      "pt-BR": "Vida",
+      "ru": "Здоровье",
+      "sr": "Zdravlje",
+      "tr": "Sağlık",
+      "uk": "Здоров'я",
+      "zh-CN": "生命值",
+      "zh-TW": "生命值"
+    }
+  },
+  "craftBench": "utility_bench",
+  "stationLevelRequired": 2,
+  "recipe": {
+    "mechanical_components": 1
+  },
+  "recyclesInto": {
+    "metal_parts": 4
+  },
+  "salvagesInto": {
+    "metal_parts": 3
+  },
+  "imageFilename": "https://cdn.arctracker.io/items/barricade_kit.png",
+  "updatedAt": "03/22/2026",
+  "addedIn": "base",
+  "vendors": [
+    {
+      "cost": {
+        "coins": 1920
+      },
+      "limit": 6,
+      "refreshSeconds": 86400,
+      "requiredLevel": 7,
+      "trader": "Apollo"
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "id": "pop_trigger",
+  "name": {
+    "da": "Pop-udløser",
+    "de": "Pop-Auslöser",
+    "en": "Pop Trigger",
+    "es": "Gatillo de tronador",
+    "fr": "Gâchette Pop",
+    "he": "הדק קפיצי",
+    "hr": "Pop Okidač",
+    "it": "Grilletto pop",
+    "ja": "ポップトリガー",
+    "ko-KR": "팝 트리거",
+    "no": "Pop-utløser",
+    "pl": "Spust pop",
+    "pt": "Gatilho de Estalinho",
+    "pt-BR": "Gatilho de Estalinho",
+    "ru": "Поп-триггер",
+    "sr": "Pop Okidač",
+    "tr": "Ani Tetik",
+    "uk": "Поп-тригер",
+    "zh-CN": "弹出扳机",
+    "zh-TW": "彈出扳機"
+  },
+  "description": {
+    "da": "Kan genbruges til håndværksmaterialer.",
+    "de": "Kann zu Herstellungsmaterialien recycelt werden.",
+    "en": "Can be recycled into crafting materials.",
+    "es": "Se puede reciclar en materiales de fabricación.",
+    "fr": "Peut être recyclé en matériaux d'artisanat.",
+    "he": "ניתן למחזור לחומרי יצירה.",
+    "hr": "Može se reciklirati u materijale za izradu.",
+    "it": "Si può riciclare in materiali da costruzione.",
+    "ja": "クラフト素材にリサイクルできる。",
+    "ko-KR": "제작 재료로 재활용할 수 있다.",
+    "no": "Kan resirkuleres til håndverksmateriell.",
+    "pl": "Można przetworzyć na materiały rzemieślnicze.",
+    "pt": "Pode ser reciclado em materiais de fabricação.",
+    "pt-BR": "Pode ser reciclado em materiais de fabricação.",
+    "ru": "Можно переработать в материалы для крафта.",
+    "sr": "Može se reciklirati u materijale za izradu.",
+    "tr": "İşleme malzemelerine geri dönüştürülebilir.",
+    "uk": "Можна переробити на матеріали для крафту.",
+    "zh-CN": "可以回收成制作材料。",
+    "zh-TW": "可以回收成製作材料。"
+  },
+  "type": "Recyclable",
+  "rarity": "Uncommon",
+  "foundIn": "ARC",
+  "value": 640,
+  "weightKg": 0.5,
+  "stackSize": 3,
+  "recyclesInto": {
+    "arc_alloy": 1,
+    "crude_explosives": 1
+  },
+  "salvagesInto": {
+    "crude_explosives": 1
+  },
+  "imageFilename": "https://cdn.arctracker.io/items/pop_trigger.png",
+  "updatedAt": "01/13/2026",
+  "addedIn": "base"
+}

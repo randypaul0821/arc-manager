@@ -1,0 +1,63 @@
+{
+  "id": "ruined_augment",
+  "name": {
+    "da": "Ødelagt forstærkning",
+    "de": "Kaputte Verstärkung",
+    "en": "Ruined Augment",
+    "es": "Aumento arruinado",
+    "fr": "Augmentation en Ruine",
+    "he": "תוסף הרוס",
+    "hr": "Uništeno Poboljšanje",
+    "it": "Potenziamento rovinato",
+    "ja": "壊れたオーグメント",
+    "ko-KR": "망가진 증강체",
+    "no": "Ødelagt forsterkning",
+    "pl": "Zrujnowane wzmocnienie",
+    "pt": "Aumento arruinado",
+    "pt-BR": "Aprimoramento Arruinado",
+    "ru": "Испорченный аугмент",
+    "sr": "Uništeno Poboljšanje",
+    "tr": "Harap Güçlendirme",
+    "uk": "Зіпсований аугмент",
+    "zh-CN": "损毁的强化件",
+    "zh-TW": "損毀的強化件"
+  },
+  "description": {
+    "da": "Kan genbruges til håndværksmaterialer.",
+    "de": "Kann zu Herstellungsmaterialien recycelt werden.",
+    "en": "Can be recycled into crafting materials.",
+    "es": "Puede reciclarse en materiales de fabricación.",
+    "fr": "Peut être recyclé en matériaux d'artisanat.",
+    "he": "ניתן למיחזור לחומרי יצירה.",
+    "hr": "Može se reciklirati u materijale za izradu.",
+    "it": "Si può riciclare in materiali da creazione.",
+    "ja": "クラフト素材にリサイクルできる。",
+    "ko-KR": "제작 재료로 재활용할 수 있습니다.",
+    "no": "Kan resirkuleres til håndverksmateriell.",
+    "pl": "Można przetworzyć na materiały rzemieślnicze.",
+    "pt": "Pode ser reciclado em materiais de fabricação.",
+    "pt-BR": "Pode ser reciclado em materiais de fabricação.",
+    "ru": "Можно переработать в материалы для крафта.",
+    "sr": "Može se reciklirati u materijale za izradu.",
+    "tr": "Üretim malzemelerine geri dönüştürülebilir.",
+    "uk": "Можна переробити на матеріали для крафту.",
+    "zh-CN": "可回收为制作材料。",
+    "zh-TW": "可回收為製作材料。"
+  },
+  "type": "Recyclable",
+  "rarity": "Common",
+  "foundIn": "ARC",
+  "value": 270,
+  "weightKg": 0.5,
+  "stackSize": 1,
+  "recyclesInto": {
+    "plastic_parts": 2,
+    "rubber_parts": 2
+  },
+  "salvagesInto": {
+    "plastic_parts": 3
+  },
+  "imageFilename": "https://cdn.arctracker.io/items/ruined_augment.png",
+  "updatedAt": "02/24/2026",
+  "addedIn": "base"
+}

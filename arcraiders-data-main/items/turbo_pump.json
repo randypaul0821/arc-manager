@@ -1,0 +1,63 @@
+{
+  "id": "turbo_pump",
+  "name": {
+    "da": "Turbopumpe",
+    "de": "Turbopumpe",
+    "en": "Turbo Pump",
+    "es": "Bomba Turbomolecular",
+    "fr": "Turbopompe",
+    "he": "משאבת טורבו",
+    "hr": "Turbo Pumpa",
+    "it": "Pompa turbo",
+    "ja": "ターボポンプ",
+    "ko-KR": "터보 펌프",
+    "no": "Turbopumpe",
+    "pl": "Turbopompa",
+    "pt": "Bomba turbo",
+    "pt-BR": "Turbobomba",
+    "ru": "Турбонасос",
+    "sr": "Turbo Pumpa",
+    "tr": "Turbo Pompası",
+    "uk": "Турбонасос",
+    "zh-CN": "涡轮泵",
+    "zh-TW": "渦輪泵"
+  },
+  "description": {
+    "da": "Kan genbruges til håndværksmaterialer.",
+    "de": "Kann zu Herstellungsmaterialien recycelt werden.",
+    "en": "Can be recycled into crafting materials.",
+    "es": "Puede reciclarse en materiales de fabricación.",
+    "fr": "Peut être recyclé en matériaux d'artisanat.",
+    "he": "ניתן למיחזור לחומרי ייצור.",
+    "hr": "Može se reciklirati u materijale za izradu.",
+    "it": "Si può riciclare in materiali da creazione.",
+    "ja": "クラフト素材にリサイクルできる。",
+    "ko-KR": "제작 재료로 재활용할 수 있습니다.",
+    "no": "Kan resirkuleres til håndverksmaterialer.",
+    "pl": "Może zostać przetworzony na materiały rzemieślnicze.",
+    "pt": "Pode ser reciclado em materiais de fabricação.",
+    "pt-BR": "Pode ser reciclado em materiais de fabricação.",
+    "ru": "Можно переработать в материалы для крафта.",
+    "sr": "Može se reciklirati u materijale za izradu.",
+    "tr": "Üretim materyallerine geri dönüştürülebilir.",
+    "uk": "Можна переробити на матеріали для крафту.",
+    "zh-CN": "可以回收成制作材料。",
+    "zh-TW": "可以回收成製作材料。"
+  },
+  "type": "Recyclable",
+  "rarity": "Rare",
+  "foundIn": "Exodus",
+  "value": 2000,
+  "weightKg": 3,
+  "stackSize": 3,
+  "recyclesInto": {
+    "mechanical_components": 1,
+    "oil": 3
+  },
+  "salvagesInto": {
+    "steel_spring": 3
+  },
+  "imageFilename": "https://cdn.arctracker.io/items/turbo_pump.png",
+  "updatedAt": "01/09/2026",
+  "addedIn": "base"
+}

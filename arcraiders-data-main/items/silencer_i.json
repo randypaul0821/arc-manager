@@ -1,0 +1,128 @@
+{
+  "id": "silencer_i",
+  "name": {
+    "da": "Lyddæmper I",
+    "de": "Schalldämpfer I",
+    "en": "Silencer I",
+    "es": "Silenciador I",
+    "fr": "Silencieux I",
+    "he": "משתיק I",
+    "hr": "Prigušivač I",
+    "it": "Silenziatore I",
+    "ja": "サイレンサー I",
+    "ko-KR": "소음기 I",
+    "no": "Lyddemper I",
+    "pl": "Tłumik I",
+    "pt": "Silenciador I",
+    "pt-BR": "Silenciador I",
+    "ru": "Глушитель I",
+    "sr": "Prigušivač I",
+    "tr": "Susturucu I",
+    "uk": "Глушник I",
+    "zh-CN": "消音器 I",
+    "zh-TW": "消音器 I"
+  },
+  "description": {
+    "da": "Reducerer lidt mængden af støj, der produceres ved skydning.",
+    "de": "Verringert die Lautstärke von Schüssen geringfügig.",
+    "en": "Slightly reduces the amount of noise produced when firing.",
+    "es": "Reduce ligeramente la cantidad de ruido producido al disparar.",
+    "fr": "Réduit légèrement la quantité de bruit produite lors du tir.",
+    "he": "מפחית מעט את עוצמת הרעש בעת הירי.",
+    "hr": "Blago smanjuje količinu buke proizvedene pri pucanju.",
+    "it": "Riduce leggermente la quantità di rumore prodotto durante lo sparo.",
+    "ja": "発砲時の騒音をわずかに軽減する。",
+    "ko-KR": "발사 시 발생하는 소음을 약간 감소시킵니다.",
+    "no": "Reduserer litt mengden støy som produseres ved skyting.",
+    "pl": "Nieznacznie zmniejsza ilość hałasu wytwarzanego podczas strzału.",
+    "pt": "Reduz ligeiramente a quantidade de ruído produzido ao disparar.",
+    "pt-BR": "Reduz de maneira sutil a quantidade de ruído produzido durante o disparo.",
+    "ru": "Немного снижает уровень шума при стрельбе.",
+    "sr": "Blago smanjuje količinu buke proizvedene pri pucanju.",
+    "tr": "Ateş ederken üretilen gürültü miktarını hafifçe azaltır.",
+    "uk": "Трохи знижує рівень шуму під час стрільби.",
+    "zh-CN": "略微降低射击时产生的噪音。",
+    "zh-TW": "略微降低射擊時產生的噪音。"
+  },
+  "type": "Modification",
+  "rarity": "Uncommon",
+  "value": 2000,
+  "weightKg": 0.25,
+  "stackSize": 1,
+  "compatibleWith": [
+    "Anvil",
+    "Arpeggio",
+    "Bettina",
+    "Bobcat",
+    "Burletta",
+    "Ferro",
+    "Kettle",
+    "Osprey",
+    "Rattler",
+    "Renegade",
+    "Stitcher",
+    "Tempest",
+    "Torrente"
+  ],
+  "blueprintLocked": true,
+  "effects": {
+    "Noise Reduction": {
+      "value": "20%",
+      "da": "Støjreduktion",
+      "de": "Geräuschreduzierung",
+      "en": "Noise Reduction",
+      "es": "Reducción de ruido",
+      "fr": "Réduction du bruit",
+      "he": "הפחתת רעש",
+      "hr": "Smanjenje Buke",
+      "it": "Riduzione rumore",
+      "ja": "騒音軽減",
+      "ko-KR": "소음 감소",
+      "no": "Støyreduksjon",
+      "pl": "Redukcja hałasu",
+      "pt": "Redução de ruído",
+      "pt-BR": "Redução de Barulho",
+      "ru": "Снижение шума",
+      "sr": "Smanjenje Buke",
+      "tr": "Gürültü Azaltma",
+      "uk": "Зниження шуму",
+      "zh-CN": "噪音降低",
+      "zh-TW": "噪音降低"
+    }
+  },
+  "craftBench": "weapon_bench",
+  "stationLevelRequired": 2,
+  "recipe": {
+    "mechanical_components": 2,
+    "wires": 4
+  },
+  "recyclesInto": {
+    "mechanical_components": 1,
+    "wires": 1
+  },
+  "salvagesInto": {
+    "mechanical_components": 1
+  },
+  "imageFilename": "https://cdn.arctracker.io/items/silencer_i.png",
+  "updatedAt": "03/22/2026",
+  "addedIn": "base",
+  "vendors": [
+    {
+      "cost": {
+        "creds": 100
+      },
+      "limit": 1,
+      "refreshSeconds": 86400,
+      "trader": "Shani"
+    },
+    {
+      "cost": {
+        "coins": 6000
+      },
+      "limit": 1,
+      "refreshSeconds": 86400,
+      "requiredLevel": 7,
+      "trader": "Tian Wen"
+    }
+  ]
+}

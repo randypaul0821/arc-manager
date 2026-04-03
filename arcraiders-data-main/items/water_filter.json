@@ -1,0 +1,63 @@
+{
+  "id": "water_filter",
+  "name": {
+    "da": "Vandfilter",
+    "de": "Wasserfilter",
+    "en": "Water Filter",
+    "es": "Filtro de agua",
+    "fr": "Filtre à Eau",
+    "he": "מסנן מים",
+    "hr": "Filter za Vodu",
+    "it": "Filtro per l'acqua",
+    "ja": "浄水器",
+    "ko-KR": "물 필터",
+    "no": "Vannfilter",
+    "pl": "Filtr do wody",
+    "pt": "Filtro de água",
+    "pt-BR": "Filtro de Água",
+    "ru": "Водяной фильтр",
+    "sr": "Filter za Vodu",
+    "tr": "Su Filtresi",
+    "uk": "Водяний фільтр",
+    "zh-CN": "滤水器",
+    "zh-TW": "濾水器"
+  },
+  "description": {
+    "da": "En bærbar filtreringsenhed til rensning af vand.",
+    "de": "Ein tragbares Filtrationsgerät zur Wasserreinigung.",
+    "en": "A portable filtration device for purifying water.",
+    "es": "Un dispositivo de filtración portátil para purificar agua.",
+    "fr": "Un dispositif de filtration portable pour purifier l'eau.",
+    "he": "מכשיר סינון נייד לטיהור מים.",
+    "hr": "Prijenosni uređaj za filtriranje i pročišćavanje vode.",
+    "it": "Un dispositivo di filtrazione portatile per purificare l'acqua.",
+    "ja": "水を浄化するための携帯用ろ過装置。",
+    "ko-KR": "물을 정화하기 위한 휴대용 여과 장치입니다.",
+    "no": "En bærbar filtreringsenhet for rensing av vann.",
+    "pl": "Przenośne urządzenie filtrujące do oczyszczania wody.",
+    "pt": "Um dispositivo de filtração portátil para purificar água.",
+    "pt-BR": "Um dispositivo de filtragem portátil para purificar água.",
+    "ru": "Портативное фильтрующее устройство для очистки воды.",
+    "sr": "Prenosni uređaj za filtriranje i prečišćavanje vode.",
+    "tr": "Suyu arıtmak için taşınabilir filtreleme cihazı.",
+    "uk": "Портативний фільтруючий пристрій для очищення води.",
+    "zh-CN": "用于净化水的便携式过滤装置。",
+    "zh-TW": "用於淨化水的便攜式過濾裝置。"
+  },
+  "type": "Recyclable",
+  "rarity": "Rare",
+  "foundIn": "Industrial",
+  "value": 1000,
+  "weightKg": 2,
+  "stackSize": 3,
+  "recyclesInto": {
+    "canister": 3,
+    "rubber_parts": 2
+  },
+  "salvagesInto": {
+    "canister": 2
+  },
+  "imageFilename": "https://cdn.arctracker.io/items/water_filter.png",
+  "updatedAt": "11/1/2025",
+  "addedIn": "base"
+}

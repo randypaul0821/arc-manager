@@ -1,0 +1,63 @@
+{
+  "id": "industrial_battery",
+  "name": {
+    "da": "Industribatteri",
+    "de": "Industrie-Akku",
+    "en": "Industrial Battery",
+    "es": "Batería industrial",
+    "fr": "Batterie Industrielle",
+    "he": "סוללה תעשייתית",
+    "hr": "Industrijska Baterija",
+    "it": "Batteria industriale",
+    "ja": "産業用バッテリー",
+    "ko-KR": "산업용 배터리",
+    "no": "Industribatteri",
+    "pl": "Bateria przemysłowa",
+    "pt": "Bateria industrial",
+    "pt-BR": "Bateria Industrial",
+    "ru": "Промышленная батарея",
+    "sr": "Industrijska Baterija",
+    "tr": "Endüstriyel Pil",
+    "uk": "Промислова батарея",
+    "zh-CN": "工业电池",
+    "zh-TW": "工業電池"
+  },
+  "description": {
+    "da": "Et stort højkapacitetsbatteri til industrielt udstyr.",
+    "de": "Kann zu Herstellungsmaterialien recycelt werden.",
+    "en": "A large, high-capacity battery for industrial equipment.",
+    "es": "Una batería grande de alta capacidad para equipo industrial.",
+    "fr": "Une grande batterie haute capacité pour équipement industriel.",
+    "he": "סוללה גדולה בעלת קיבולת גבוהה לציוד תעשייתי.",
+    "hr": "Velika baterija visokog kapaciteta za industrijsku opremu.",
+    "it": "Si può riciclare in materiali da creazione.",
+    "ja": "産業機器用の大型高容量バッテリー。",
+    "ko-KR": "산업 장비용 대형 고용량 배터리.",
+    "no": "Et stort høykapasitetsbatteri for industrielt utstyr.",
+    "pl": "Duża bateria o wysokiej pojemności do sprzętu przemysłowego.",
+    "pt": "Uma bateria grande de alta capacidade para equipamento industrial.",
+    "pt-BR": "Uma bateria grande de alta capacidade para equipamentos industriais.",
+    "ru": "Большая батарея высокой емкости для промышленного оборудования.",
+    "sr": "Velika baterija visokog kapaciteta za industrijsku opremu.",
+    "tr": "Endüstriyel ekipman için büyük, yüksek kapasiteli batarya.",
+    "uk": "Велика батарея високої ємності для промислового обладнання.",
+    "zh-CN": "用于工业设备的大型高容量电池。",
+    "zh-TW": "用於工業設備的大型高容量電池。"
+  },
+  "type": "Recyclable",
+  "rarity": "Rare",
+  "foundIn": "Industrial",
+  "value": 1000,
+  "weightKg": 2,
+  "stackSize": 3,
+  "recyclesInto": {
+    "battery": 2,
+    "chemicals": 7
+  },
+  "salvagesInto": {
+    "battery": 2
+  },
+  "imageFilename": "https://cdn.arctracker.io/items/industrial_battery.png",
+  "updatedAt": "11/03/2025",
+  "addedIn": "base"
+}

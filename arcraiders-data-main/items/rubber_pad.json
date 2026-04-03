@@ -1,0 +1,62 @@
+{
+  "id": "rubber_pad",
+  "name": {
+    "da": "Gummipude",
+    "de": "Gummimatte",
+    "en": "Rubber Pad",
+    "es": "Almohadilla de Goma",
+    "fr": "Tapis en Caoutchouc",
+    "he": "רפידת גומי",
+    "hr": "Gumena Podloga",
+    "it": "Cuscinetto di Gomma",
+    "ja": "ゴムパッド",
+    "ko-KR": "고무 패드",
+    "no": "Gummipute",
+    "pl": "Gumowa Podkładka",
+    "pt": "Almofada de Borracha",
+    "pt-BR": "Tapete de Borracha",
+    "ru": "Резиновый коврик",
+    "sr": "Gumena Podloga",
+    "tr": "Kauçuk Yastık",
+    "uk": "Гумова прокладка",
+    "zh-CN": "橡胶垫",
+    "zh-TW": "橡膠墊"
+  },
+  "description": {
+    "da": "Kan genbruges til gummidele.",
+    "de": "Kann zu Gummiteilen recycelt werden.",
+    "en": "Can be recycled into rubber parts.",
+    "es": "Puede reciclarse en piezas de goma.",
+    "fr": "Peut être recyclé en composants en caoutchouc.",
+    "he": "ניתן למיחזור לחלקי גומי.",
+    "hr": "Može se reciklirati u gumene dijelove.",
+    "it": "Si può riciclare in parti di gomma.",
+    "ja": "ゴム部品にリサイクルできる。",
+    "ko-KR": "고무 부품으로 재활용할 수 있습니다.",
+    "no": "Kan resirkuleres til gummideler.",
+    "pl": "Można przetworzyć na części gumowe.",
+    "pt": "Pode ser reciclado em peças de borracha.",
+    "pt-BR": "Pode ser reciclado em peças de borracha.",
+    "ru": "Можно переработать в резиновые детали.",
+    "sr": "Može se reciklirati u gumene delove.",
+    "tr": "Kauçuk parçalara geri dönüştürülebilir.",
+    "uk": "Можна переробити на гумові деталі.",
+    "zh-CN": "可回收为橡胶零件。",
+    "zh-TW": "可回收為橡膠零件。"
+  },
+  "type": "Recyclable",
+  "rarity": "Rare",
+  "foundIn": "Electrical",
+  "value": 1000,
+  "weightKg": 2,
+  "stackSize": 3,
+  "recyclesInto": {
+    "rubber_parts": 18
+  },
+  "salvagesInto": {
+    "rubber_parts": 12
+  },
+  "imageFilename": "https://cdn.arctracker.io/items/rubber_pad.png",
+  "updatedAt": "02/24/2026",
+  "addedIn": "base"
+}

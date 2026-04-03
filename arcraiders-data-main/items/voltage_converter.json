@@ -1,0 +1,74 @@
+{
+  "id": "voltage_converter",
+  "name": {
+    "da": "Spændingsomformer",
+    "de": "Spannungswandler",
+    "en": "Voltage Converter",
+    "es": "Convertidor de voltaje",
+    "fr": "Transformateur de Tension",
+    "he": "ממיר מתח",
+    "hr": "Pretvarač Napona",
+    "it": "Convertitore di tensione",
+    "ja": "電圧変換器",
+    "ko-KR": "변압기",
+    "no": "Spenningsomformer",
+    "pl": "Przetwornica napięcia",
+    "pt": "Conversor de voltagem",
+    "pt-BR": "Conversor de Voltagem",
+    "ru": "Преобразователь напряжения",
+    "sr": "Pretvarač Napona",
+    "tr": "Voltaj Dönüştürücü",
+    "uk": "Перетворювач напруги",
+    "zh-CN": "变电器",
+    "zh-TW": "變壓器"
+  },
+  "description": {
+    "da": "Bruges i håndværk. Bruges til at lave: Tungt skjold, Showstopper",
+    "de": "Wird bei der Herstellung verwendet. Zur Herstellung von: Schwerer Schild, Showstopper",
+    "en": "Used in crafting. Used to craft: Heavy Shield, Showstopper",
+    "es": "Se usa en la fabricación. Se usa para fabricar: Escudo pesado, Aguafiestas",
+    "fr": "Utilisé dans la fabrication. Permet de fabriquer : Bouclier lourd, Showstopper",
+    "he": "משמש ליצירה. משמש ליצירת: Heavy Shield, Showstopper",
+    "hr": "Koristi se za izradu. Koristi se za izradu: Teški Štit, Showstopper",
+    "it": "Utile per le creazioni. Si usa per creare: Scudo pesante, Granata stordente",
+    "ja": "クラフトに使用。作成可能: ヘビーシールド、ショーストッパー",
+    "ko-KR": "제작에 사용됩니다. 제작 가능: 준중량 실드, 쇼스토퍼",
+    "no": "Brukes i håndverk. Brukes til å lage: Tungt skjold, Showstopper",
+    "pl": "Używany do wytwarzania. Używany do wytwarzania: Ciężka tarcza, Showstopper",
+    "pt": "Usado na fabricação. Usado para fabricar: Escudo pesado, Showstopper",
+    "pt-BR": "Usado na fabricação. Usado para fabricar: Escudo Pesado, Para-Tudo",
+    "ru": "Используется в крафте. Используется для создания: Тяжёлый щит, Шоустоппер",
+    "sr": "Koristi se za izradu. Koristi se za izradu: Teški Štit, Showstopper",
+    "tr": "Üretimde kullanılır. Üretilebilir: Ağır Kalkan, Efsane",
+    "uk": "Використовується в крафті. Використовується для створення: Важкий щит, Шоустопер",
+    "zh-CN": "用于制作。可制作：重型护盾、终结者",
+    "zh-TW": "用於製作。可製作：重型護盾、終結者"
+  },
+  "type": "Topside Material",
+  "rarity": "Rare",
+  "foundIn": "Electrical",
+  "value": 500,
+  "weightKg": 0.3,
+  "stackSize": 5,
+  "recyclesInto": {
+    "rubber_parts": 1,
+    "wires": 1
+  },
+  "salvagesInto": {
+    "rubber_parts": 2
+  },
+  "imageFilename": "https://cdn.arctracker.io/items/voltage_converter.png",
+  "updatedAt": "03/22/2026",
+  "addedIn": "base",
+  "vendors": [
+    {
+      "cost": {
+        "assorted_seeds": 10
+      },
+      "limit": 5,
+      "refreshSeconds": 86400,
+      "requiredLevel": 12,
+      "trader": "Celeste"
+    }
+  ]
+}

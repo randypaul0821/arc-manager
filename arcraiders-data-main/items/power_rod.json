@@ -1,0 +1,69 @@
+{
+  "id": "power_rod",
+  "name": {
+    "da": "Kraftstang",
+    "de": "Energiestab",
+    "en": "Power Rod",
+    "es": "Varilla de energía",
+    "fr": "Tige d'Alimentation",
+    "he": "מוט כוח",
+    "hr": "Energetska Šipka",
+    "it": "Asta di trasmissione",
+    "ja": "電気ロッド",
+    "ko-KR": "파워 로드",
+    "no": "Kraftstang",
+    "pl": "Pręt zasilający",
+    "pt": "Haste de energia",
+    "pt-BR": "Barra de Força",
+    "ru": "Энергетический стержень",
+    "sr": "Energetska Šipka",
+    "tr": "Güç Bağlantısı",
+    "uk": "Енергетичний стрижень",
+    "zh-CN": "能量棒",
+    "zh-TW": "能量棒"
+  },
+  "description": {
+    "da": "Bruges til håndværk. Bruges til at lave: Tungt skjold, Karabinkrog",
+    "de": "Wird bei der Herstellung verwendet. Zur Herstellung von: Schwerer Schild, Karabinerhaken",
+    "en": "Used in crafting. Used to craft: Heavy Shield, Snap Hook",
+    "es": "Usado en fabricación. Usado para fabricar: Escudo pesado, Gancho rápido",
+    "fr": "Utilisé pour la fabrication. Permet de fabriquer : Bouclier lourd, Mousqueton",
+    "he": "משמש ליצירה. משמש ליצירת: מגן כבד, טבעת שאקל",
+    "hr": "Koristi se u izradi. Koristi se za izradu: Teški Štit, Brza Kuka",
+    "it": "Utile per le creazioni. Si usa per creare: Scudo pesante, Gancio a scatto",
+    "ja": "製作に使用。製作に使用: ヘビーシールド、スナップフック",
+    "ko-KR": "제작에 사용. 제작 용도: 준중량 실드, 스냅 훅",
+    "no": "Brukes til håndverk. Brukes til å lage: Tungt skjold, Karabinkrok",
+    "pl": "Używane do wytwarzania. Używane do wytworzenia: Ciężka tarcza, Karabińczyk",
+    "pt": "Usado na fabricação. Usado para fabricar: Escudo pesado, Gancho rápido",
+    "pt-BR": "Serve para fabricações. Usado para fabricar: Mosquetão, Escudo Pesado",
+    "ru": "Используется в создании предметов. Используется для создания: тяжелый щит, карабин",
+    "sr": "Koristi se u izradi. Koristi se za izradu: Teški Štit, Brza Kuka",
+    "tr": "Üretimde kullanılır. Üretimde kullanılır: Ağır Kalkan, Mandal Kancası",
+    "uk": "Використовується у створенні предметів. Використовується для створення: важкий щит, карабін",
+    "zh-CN": "用于制作。用于制作：重型护盾、快扣钩",
+    "zh-TW": "用於製作。用於製作：重型護盾、快扣鉤"
+  },
+  "type": "Refined Material",
+  "rarity": "Epic",
+  "foundIn": "Exodus",
+  "value": 5000,
+  "weightKg": 2,
+  "stackSize": 3,
+  "craftBench": "refiner",
+  "stationLevelRequired": 3,
+  "recipe": {
+    "advanced_electrical_components": 2,
+    "arc_circuitry": 2
+  },
+  "recyclesInto": {
+    "advanced_electrical_components": 1,
+    "arc_circuitry": 1
+  },
+  "salvagesInto": {
+    "advanced_electrical_components": 1
+  },
+  "imageFilename": "https://cdn.arctracker.io/items/power_rod.png",
+  "updatedAt": "03/17/2026",
+  "addedIn": "base"
+}

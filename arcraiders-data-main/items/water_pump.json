@@ -1,0 +1,63 @@
+{
+  "id": "water_pump",
+  "name": {
+    "da": "Vandpumpe",
+    "de": "Wasserpumpe",
+    "en": "Water Pump",
+    "es": "Bomba de agua",
+    "fr": "Pompe à Eau",
+    "he": "משאבת מים",
+    "hr": "Vodena Pumpa",
+    "it": "Pompa idrica",
+    "ja": "送水ポンプ",
+    "ko-KR": "물 펌프",
+    "no": "Vannpumpe",
+    "pl": "Pompa wodna",
+    "pt": "Bomba d'água",
+    "pt-BR": "Bomba d'Água",
+    "ru": "Водяной насос",
+    "sr": "Vodena Pumpa",
+    "tr": "Su Pompası",
+    "uk": "Водяний насос",
+    "zh-CN": "抽水机",
+    "zh-TW": "抽水機"
+  },
+  "description": {
+    "da": "Kan genbruges til håndværksmaterialer.",
+    "de": "Kann zu Herstellungsmaterialien recycelt werden.",
+    "en": "Can be recycled into crafting materials.",
+    "es": "Se puede reciclar en materiales de fabricación.",
+    "fr": "Peut être recyclée en matériaux d'artisanat.",
+    "he": "ניתן למחזור לחומרי יצירה.",
+    "hr": "Može se reciklirati u materijale za izradu.",
+    "it": "Si può riciclare in materiali da creazione.",
+    "ja": "クラフト素材にリサイクルできる。",
+    "ko-KR": "제작 재료로 재활용할 수 있습니다.",
+    "no": "Kan resirkuleres til håndverksmateriell.",
+    "pl": "Można przetworzyć na materiały rzemieślnicze.",
+    "pt": "Pode ser reciclada em materiais de fabricação.",
+    "pt-BR": "Pode ser reciclado em materiais de fabricação.",
+    "ru": "Можно переработать в материалы для крафта.",
+    "sr": "Može se reciklirati u materijale za izradu.",
+    "tr": "Üretim malzemelerine geri dönüştürülebilir.",
+    "uk": "Можна переробити на матеріали для крафту.",
+    "zh-CN": "可以回收成制作材料。",
+    "zh-TW": "可以回收成製作材料。"
+  },
+  "type": "Recyclable",
+  "rarity": "Rare",
+  "foundIn": "Mechanical, Industrial",
+  "value": 1000,
+  "weightKg": 2,
+  "stackSize": 3,
+  "recyclesInto": {
+    "metal_parts": 4,
+    "oil": 2
+  },
+  "salvagesInto": {
+    "oil": 2
+  },
+  "imageFilename": "https://cdn.arctracker.io/items/water_pump.png",
+  "updatedAt": "11/03/2025",
+  "addedIn": "base"
+}

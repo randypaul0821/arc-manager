@@ -1,0 +1,72 @@
+{
+  "id": "energy_clip",
+  "name": {
+    "da": "Energiklips",
+    "de": "Energieclip",
+    "en": "Energy Clip",
+    "es": "Clip de energía",
+    "fr": "Clip d'Énergie",
+    "he": "מחסנית אנרגיה",
+    "hr": "Energetska kopča",
+    "it": "Clip energetica",
+    "ja": "エネルギークリップ",
+    "ko-KR": "에너지 탄창",
+    "no": "Energiklips",
+    "pl": "Klip energetyczny",
+    "pt": "Clipe de energia",
+    "pt-BR": "Clipe de Energia",
+    "ru": "Энергетический зажим",
+    "sr": "Енергетска копча",
+    "tr": "Enerji Şarjörü",
+    "uk": "Енергетичний затискач",
+    "zh-CN": "能量夹",
+    "zh-TW": "能量夾"
+  },
+  "description": {
+    "da": "Kompatibel med: Equalizer, Jupiter",
+    "de": "Munition, die für Energiewaffen genutzt wird. Mit einem Clip wird eine einzelne Waffe vollständig geladen. Kompatibel mit: Equalizer, Jupiter",
+    "en": "Compatible with: Equalizer, Jupiter",
+    "es": "Compatible con: Equalizer, Jupiter",
+    "fr": "Compatible avec : Equalizer, Jupiter",
+    "he": "תואם ל: אקוולייזר, יופיטר",
+    "hr": "Kompatibilno s: Equalizer, Jupiter",
+    "it": "Compatibile con: Equalizer, Jupiter",
+    "ja": "対応武器: Equalizer、Jupiter",
+    "ko-KR": "호환 무기: 이퀄라이저, 주피터",
+    "no": "Kompatibel med: Equalizer, Jupiter",
+    "pl": "Kompatybilna z: Equalizer, Jupiter",
+    "pt": "Compatível com: Equalizer, Jupiter",
+    "pt-BR": "Compatível com: Equalizador, Jupiter",
+    "ru": "Совместимо с: Equalizer, Jupiter",
+    "sr": "Kompatibilno sa: Equalizer, Jupiter",
+    "tr": "Uyumlu silahlar: Equalizer, Jupiter",
+    "uk": "Сумісно з: Equalizer, Jupiter",
+    "zh-CN": "兼容武器：Equalizer、Jupiter",
+    "zh-TW": "相容武器：Equalizer、Jupiter"
+  },
+  "type": "Ammunition",
+  "rarity": "Rare",
+  "value": 200,
+  "weightKg": 0.3,
+  "stackSize": 5,
+  "craftQuantity": 5,
+  "compatibleWith": ["Equalizer", "Jupiter"],
+  "craftBench": "workbench",
+  "stationLevelRequired": 1,
+  "recipe": {
+    "advanced_arc_powercell": 1,
+    "battery": 2
+  },
+  "imageFilename": "https://cdn.arctracker.io/items/energy_clip.png",
+  "updatedAt": "03/22/2026",
+  "addedIn": "base",
+  "vendors": [
+    {
+      "cost": {
+        "coins": 3000
+      },
+      "requiredLevel": 12,
+      "trader": "Tian Wen"
+    }
+  ]
+}

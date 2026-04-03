@@ -1,0 +1,124 @@
+{
+  "id": "noisemaker",
+  "name": {
+    "da": "Støjgenerator",
+    "de": "Krachmacher",
+    "en": "Noisemaker",
+    "es": "Generador de ruido",
+    "fr": "Crécelle",
+    "he": "מרעישן",
+    "hr": "Zvučni alarm",
+    "it": "Generatore di rumore",
+    "ja": "騒音発生装置",
+    "ko-KR": "소음기",
+    "no": "Støymaker",
+    "pl": "Generator hałasu",
+    "pt": "Gerador de ruído",
+    "pt-BR": "Barulhento",
+    "ru": "Шумелка",
+    "sr": "Zvučni alarm",
+    "tr": "Yaygaracı",
+    "uk": "Шумовик",
+    "zh-CN": "噪音制造器",
+    "zh-TW": "噪音製造器"
+  },
+  "description": {
+    "da": "En udplaceringsparat nærhedssensor, der udløser en alarm, når fjendtlige raiders opdages.",
+    "de": "Ein einsatzbereiter Näherungssensor, der einen Alarm ertönen lässt, wenn er gegnerische Raider entdeckt.",
+    "en": "A deployable proximity sensor that sounds an alarm when enemy raiders are detected.",
+    "es": "Un sensor de proximidad desplegable que activa una alarma cuando se detectan raiders enemigos.",
+    "fr": "Un capteur de proximité déployable qui déclenche une alarme lorsque des raiders ennemis sont détectés.",
+    "he": "חיישן קרבה הניתן לפריסה המפעיל אזעקה כאשר מזוהים אויבים.",
+    "hr": "Postavljivi senzor blizine koji aktivira alarm kada se otkriju neprijateljski Raidersi.",
+    "it": "Un sensore di prossimità schierabile che suona un allarme quando vengono rilevati raiders nemici.",
+    "ja": "敵のレイダーを検知すると警報を鳴らす設置型近接センサー。",
+    "ko-KR": "적 레이더가 감지되면 경보를 울리는 설치형 근접 센서입니다.",
+    "no": "En utplasserbar nærhetssensor som utløser en alarm når fiendtlige raiders oppdages.",
+    "pl": "Rozmieszczalny czujnik zbliżeniowy, który uruchamia alarm po wykryciu wrogich najeźdźców.",
+    "pt": "Um sensor de proximidade implantável que dispara um alarme quando raiders inimigos são detectados.",
+    "pt-BR": "Um sensor de proximidade posicionável que dispara um alarme quando raiders inimigos são detectados.",
+    "ru": "Устанавливаемый датчик приближения, который подает сигнал тревоги при обнаружении вражеских рейдеров.",
+    "sr": "Postavljivi senzor blizine koji aktivira alarm kada se otkriju neprijateljski Rajderi.",
+    "tr": "Düşman akıncılar tespit edildiğinde alarm çalan konuşlandırılabilir yakınlık sensörü.",
+    "uk": "Встановлюваний датчик наближення, який подає сигнал тривоги при виявленніворожих рейдерів.",
+    "zh-CN": "可部署的接近传感器，侦测到敌方掠夺者时会发出警报。",
+    "zh-TW": "可部署的接近感應器，偵測到敵方掠奪者時會發出警報。"
+  },
+  "type": "Quick Use",
+  "rarity": "Common",
+  "value": 640,
+  "weightKg": 0.3,
+  "stackSize": 3,
+  "effects": {
+    "Duration": {
+      "value": "4s",
+      "da": "Varighed",
+      "de": "Dauer",
+      "en": "Duration",
+      "es": "Duración",
+      "fr": "Durée",
+      "he": "משך פעולה",
+      "hr": "Trajanje",
+      "it": "Durata",
+      "ja": "持続時間",
+      "ko-KR": "지속 시간",
+      "no": "Varighet",
+      "pl": "Czas trwania",
+      "pt": "Duração",
+      "pt-BR": "Duração",
+      "ru": "Длительность",
+      "sr": "Trajanje",
+      "tr": "Süre",
+      "uk": "Тривалість",
+      "zh-CN": "持续时间",
+      "zh-TW": "持續時間"
+    },
+    "Trigger Radius": {
+      "value": "8m",
+      "da": "Udløserradius",
+      "de": "Auslöseradius",
+      "en": "Trigger Radius",
+      "es": "Radio de activación",
+      "fr": "Rayon de déclenchement",
+      "he": "רדיוס הפעלה",
+      "hr": "Radijus aktivacije",
+      "it": "Raggio di attivazione",
+      "ja": "作動範囲",
+      "ko-KR": "작동 반경",
+      "no": "Utløserradius",
+      "pl": "Zasięg wyzwalania",
+      "pt": "Raio de ativação",
+      "pt-BR": "Raio de Acionamento",
+      "ru": "Радиус срабатывания",
+      "sr": "Radijus aktivacije",
+      "tr": "Tetikleme Yarıçapı",
+      "uk": "Радіус спрацювання",
+      "zh-CN": "触发范围",
+      "zh-TW": "觸發範圍"
+    }
+  },
+  "craftBench": "in_raid",
+  "recipe": {
+    "plastic_parts": 2,
+    "speaker_component": 1
+  },
+  "recyclesInto": {
+    "speaker_component": 1
+  },
+  "salvagesInto": {
+    "speaker_component": 1
+  },
+  "imageFilename": "https://cdn.arctracker.io/items/noisemaker.png",
+  "updatedAt": "01/13/2026",
+  "addedIn": "base",
+  "vendors": [
+    {
+      "cost": {
+        "coins": 1920
+      },
+      "limit": 6,
+      "refreshSeconds": 86400,
+      "trader": "Apollo"
+    }
+  ]
+}

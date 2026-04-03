@@ -1,0 +1,126 @@
+{
+  "id": "defibrillator",
+  "name": {
+    "da": "Hjertestarter",
+    "de": "Defibrillator",
+    "en": "Defibrillator",
+    "es": "Desfibrilador",
+    "fr": "Défibrillateur",
+    "he": "דפיברילטור",
+    "hr": "Defibrilator",
+    "it": "Defibrillatore",
+    "ja": "蘇生装置",
+    "ko-KR": "제세동기",
+    "no": "Hjertestarter",
+    "pl": "Defibrylator",
+    "pt": "Desfibrilador",
+    "pt-BR": "Desfibrilador",
+    "ru": "Дефибриллятор",
+    "sr": "Defibrilator",
+    "tr": "Şok Cihazı",
+    "uk": "Дефібрилятор",
+    "zh-CN": "除颤器",
+    "zh-TW": "除顫器"
+  },
+  "description": {
+    "da": "En indsprøjtning, der hurtigt genopliver faldne raidere og gendanner noget helbred.",
+    "de": "Eine Injektion, die entkräftete Raider schnell wiederbelebt und etwas Gesundheit wiederherstellt.",
+    "en": "An injection that quickly revives downed raiders and restores some health.",
+    "es": "Una inyección que revive rápidamente a los saqueadores caídos y restaura algo de salud.",
+    "fr": "Une injection qui permet de réanimer rapidement les Raiders à terre et de leur redonner quelques points de santé.",
+    "he": "זריקה המקימה במהירות ריידרים מנוטרלים ומשיבה מעט בריאות.",
+    "hr": "Injekcija koja brzo oživljava oborene pljačkaše i obnavlja dio zdravlja.",
+    "it": "Un'iniezione che riporta rapidamente in vita i predoni abbattuti e ripristina un po' di salute.",
+    "ja": "倒れたレイダーを素早く蘇生し、体力を回復する注射。",
+    "ko-KR": "쓰러진 레이더를 빠르게 소생시키고 일부 체력을 회복시키는 주사제.",
+    "no": "En injeksjon som raskt gjenoppliver nedkjempede raidere og gjenoppretter litt helse.",
+    "pl": "Zastrzyk, który szybko przywraca do życia powalonych najeźdźców i przywraca trochę zdrowia.",
+    "pt": "Uma injeção que revive rapidamente saqueadores caídos e restaura um pouco de saúde.",
+    "pt-BR": "Injeção que revive Combatentes derrubados com rapidez e recupera um pouco de vida.",
+    "ru": "Инъекция, которая быстро поднимает упавших рейдеров и восстанавливает часть здоровья.",
+    "sr": "Injekcija koja brzo oživljava oborene pljačkaše i obnavlja deo zdravlja.",
+    "tr": "Yere düşmüş akıncıları hızlıca canlandıran ve biraz sağlık kazandıran bir enjeksiyon.",
+    "uk": "Ін'єкція, яка швидко піднімає збитих рейдерів і відновлює частину здоров'я.",
+    "zh-CN": "能快速复苏倒地的掠夺者并恢复部分生命值的注射剂。",
+    "zh-TW": "能快速復甦倒地的掠奪者並恢復部分生命值的注射劑。"
+  },
+  "type": "Quick Use",
+  "rarity": "Rare",
+  "value": 1000,
+  "weightKg": 0.75,
+  "stackSize": 3,
+  "blueprintLocked": true,
+  "effects": {
+    "Healing": {
+      "value": 50,
+      "da": "Helbredelse",
+      "de": "Heilen",
+      "en": "Healing",
+      "es": "Curación",
+      "fr": "Soins",
+      "he": "ריפוי",
+      "hr": "Liječenje",
+      "it": "Guarigione",
+      "ja": "回復",
+      "ko-KR": "치유",
+      "no": "Helbredelse",
+      "pl": "Leczenie",
+      "pt": "Cura",
+      "pt-BR": "Cura",
+      "ru": "Исцеление",
+      "sr": "Lečenje",
+      "tr": "İyileştirme",
+      "uk": "Зцілення",
+      "zh-CN": "治疗",
+      "zh-TW": "治療"
+    },
+    "Use Time": {
+      "value": "1.5s",
+      "da": "Brugstid",
+      "de": "Verwendungszeit",
+      "en": "Use Time",
+      "es": "Tiempo de uso",
+      "fr": "Temps d'utilisation",
+      "he": "זמן שימוש",
+      "hr": "Vrijeme Korištenja",
+      "it": "Tempo d'uso",
+      "ja": "使用時間",
+      "ko-KR": "사용 시간",
+      "no": "Brukstid",
+      "pl": "Czas użycia",
+      "pt": "Tempo de uso",
+      "pt-BR": "Tempo de uso",
+      "ru": "Время использования",
+      "sr": "Vreme Korišćenja",
+      "tr": "Kullanım Süresi",
+      "uk": "Час використання",
+      "zh-CN": "使用时间",
+      "zh-TW": "使用時間"
+    }
+  },
+  "craftBench": "med_station",
+  "stationLevelRequired": 2,
+  "recipe": {
+    "moss": 1,
+    "plastic_parts": 9
+  },
+  "recyclesInto": {
+    "moss": 1,
+    "plastic_parts": 1
+  },
+  "salvagesInto": {
+    "chemicals": 2
+  },
+  "imageFilename": "https://cdn.arctracker.io/items/defibrillator.png",
+  "updatedAt": "03/22/2026",
+  "addedIn": "base",
+  "vendors": [
+    {
+      "cost": {
+        "coins": 3000
+      },
+      "requiredLevel": 7,
+      "trader": "Lance"
+    }
+  ]
+}

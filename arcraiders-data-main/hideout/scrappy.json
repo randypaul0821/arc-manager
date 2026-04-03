@@ -1,0 +1,88 @@
+{
+  "id": "scrappy",
+  "name": {
+    "da": "Scrappy",
+    "de": "Scrappy",
+    "en": "Scrappy",
+    "es": "Scrappy",
+    "fr": "Coquillard",
+    "he": "סקראפי",
+    "hr": "Otpadnik",
+    "it": "Scartino",
+    "ja": "スクラッピー",
+    "ko-KR": "수탉 꼬꼬",
+    "no": "Scrappy",
+    "pl": "Scrappy",
+    "pt": "Sucatinha",
+    "pt-BR": "Sucatinha",
+    "ru": "Плюшкин",
+    "sr": "Otpadnik",
+    "tr": "Hurda Tezgahı",
+    "uk": "Старганщик",
+    "zh-CN": "废品仔",
+    "zh-TW": "廢品回收站"
+  },
+  "maxLevel": 5,
+  "levels": [
+    {
+      "level": 1,
+      "requirementItemIds": []
+    },
+    {
+      "level": 2,
+      "requirementItemIds": [
+        {
+          "itemId": "dog_collar",
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "level": 3,
+      "requirementItemIds": [
+        {
+          "itemId": "lemon",
+          "quantity": 3
+        },
+        {
+          "itemId": "apricot",
+          "quantity": 3
+        }
+      ]
+    },
+    {
+      "level": 4,
+      "requirementItemIds": [
+        {
+          "itemId": "prickly_pear",
+          "quantity": 6
+        },
+        {
+          "itemId": "olives",
+          "quantity": 6
+        },
+        {
+          "itemId": "cat_bed",
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "level": 5,
+      "requirementItemIds": [
+        {
+          "itemId": "mushroom",
+          "quantity": 12
+        },
+        {
+          "itemId": "apricot",
+          "quantity": 12
+        },
+        {
+          "itemId": "very_comfortable_pillow",
+          "quantity": 3
+        }
+      ]
+    }
+  ]
+}

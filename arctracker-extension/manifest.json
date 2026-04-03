@@ -1,0 +1,28 @@
+{
+   "background": {
+      "service_worker": "background.js"
+   },
+   "declarative_net_request": {
+      "rule_resources": [ {
+         "enabled": true,
+         "id": "ruleset_1",
+         "path": "rules.json"
+      } ]
+   },
+   "description": "Links your Embark account to ARCTracker for automatic sync",
+   "externally_connectable": {
+      "matches": [ "https://*.arctracker.io/*", "https://arctracker.io/*", "http://localhost/*" ]
+   },
+   "host_permissions": [ "http://127.0.0.1:49172/*", "http://localhost/*", "https://*.arctracker.io/*", "https://arctracker.io/*" ],
+   "icons": {
+      "128": "icon128.png",
+      "16": "icon16.png",
+      "48": "icon48.png"
+   },
+   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApgV2ZLOcYYFOkXFBs8B5C0KKsJk4Ho9H2b1bgtlwLiQxMKiPYaUnSFJr7Ifjri4boQsMqah09smytc5IgHGYyyLu95EuZfdRN+7fe5mXWhv3kiMWp8Ga/8xqA5InITFpuUD3A6ZIwLJgBZ4P15CkjUe5LraDLauGe6+rAGSTo/4L++qqCUNL8/it8BOQRnCllzESJ1qrlqS6FzV3F+2fGUtAhLeerGpewHtrtMpewSeT+IQHa5uXz4AGzgDzJXEkWOUB/0MTLNLPeJrEnXH15X+od3GG6Mqy23B2z45TB5EScZoyUDmTXmPW2R5N6twU7jcabtridBOZcLl74yF2zQIDAQAB",
+   "manifest_version": 3,
+   "name": "ARCTracker",
+   "permissions": [ "declarativeNetRequest" ],
+   "update_url": "https://clients2.google.com/service/update2/crx",
+   "version": "1.0.0"
+}
