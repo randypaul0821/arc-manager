@@ -319,6 +319,14 @@ def _migrate(c):
     except sqlite3.OperationalError:
         logger.debug("  索引 idx_watch_account_target 已存在，跳过")
 
+    # 14 — 清理孤儿监控规则（引用已删除套餐的 bundle watch rules）
+    orphan = c.execute(
+        "DELETE FROM account_watch_rules WHERE rule_type='bundle' "
+        "AND CAST(target_id AS INTEGER) NOT IN (SELECT id FROM bundles)"
+    ).rowcount
+    if orphan:
+        logger.info(f"  清理 {orphan} 条孤儿套餐监控规则")
+
 
 if __name__ == "__main__":
     init_db()

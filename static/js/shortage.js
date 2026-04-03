@@ -76,11 +76,11 @@ function toggleItemAccount(itemId, accountId) {
 
 // ── 根据选中账号计算物品库存 ──
 
-function _calcStockForItem(item) {
-  if (!_selectedAccounts.size) return 0;
+function _calcStockForItem(item, useAllAccounts) {
+  if (!useAllAccounts && !_selectedAccounts.size) return 0;
   const excludes = _itemAccountExcludes[item.item_id];
   return (item.account_stocks || [])
-    .filter(a => _selectedAccounts.has(a.account_id) && !(excludes && excludes.has(a.account_id)))
+    .filter(a => (useAllAccounts || _selectedAccounts.has(a.account_id)) && !(excludes && excludes.has(a.account_id)))
     .reduce((s, a) => s + a.quantity, 0);
 }
 

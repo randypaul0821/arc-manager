@@ -217,6 +217,8 @@ def delete_bundle(bundle_id: int) -> bool:
     logger.info(f"删除套餐: id={bundle_id}")
     try:
         with get_conn() as conn:
+            conn.execute("DELETE FROM account_watch_rules WHERE rule_type='bundle' AND target_id=?", (bundle_id,))
+            conn.execute("DELETE FROM bundle_alerts WHERE bundle_id=?", (bundle_id,))
             conn.execute("DELETE FROM bundles WHERE id=?", (bundle_id,))
             logger.info(f"套餐已删除: id={bundle_id}")
             return True
@@ -344,12 +346,15 @@ def generate_hideout_bundles() -> dict:
         with open(fpath, encoding="utf-8") as f:
             stations.append(json.load(f))
 
-    # 删除旧的 hideout 套餐
+    # 删除旧的 hideout 套餐及关联的监控规则
     with get_conn() as conn:
         old = conn.execute("SELECT id FROM bundles WHERE source='hideout'").fetchall()
         old_ids = [r["id"] for r in old]
         if old_ids:
-            conn.execute(f"DELETE FROM bundles WHERE source='hideout'")
+            ph = ",".join("?" * len(old_ids))
+            conn.execute(f"DELETE FROM account_watch_rules WHERE rule_type='bundle' AND target_id IN ({ph})", old_ids)
+            conn.execute(f"DELETE FROM bundle_alerts WHERE bundle_id IN ({ph})", old_ids)
+            conn.execute("DELETE FROM bundles WHERE source='hideout'")
         deleted = len(old_ids)
 
     created = 0
@@ -430,10 +435,14 @@ def generate_project_bundles() -> dict:
     with open(proj_file, encoding="utf-8") as f:
         projects = json.load(f)
 
-    # 删除旧的 projects 套餐
+    # 删除旧的 projects 套餐及关联的监控规则
     with get_conn() as conn:
         old = conn.execute("SELECT id FROM bundles WHERE source='projects'").fetchall()
-        if old:
+        old_ids = [r["id"] for r in old]
+        if old_ids:
+            ph = ",".join("?" * len(old_ids))
+            conn.execute(f"DELETE FROM account_watch_rules WHERE rule_type='bundle' AND target_id IN ({ph})", old_ids)
+            conn.execute(f"DELETE FROM bundle_alerts WHERE bundle_id IN ({ph})", old_ids)
             conn.execute("DELETE FROM bundles WHERE source='projects'")
         deleted = len(old)
 

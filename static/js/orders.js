@@ -94,11 +94,14 @@ function renderOrdersFromCache() {
     const cost    = o.total_cost || 0;
     const revenue = o.total_revenue || 0;
     const profit  = revenue - cost;
+    const isSelected = _selectedOrders.has(o.id);
 
     let itemsHtml = '';
     if (isPending) {
       // 用 Map 替代 find，O(1) 查找
       const shortageMap = new Map(_shortageData.map(s => [s.item_id, s]));
+      // 未选中的订单用全部账号库存计算，不受账号筛选影响
+      const useAllAccounts = !isSelected;
       // 汇总所有选中订单的物品需求量，用于多选时的缺货计算
       const selectedNeedMap = new Map();
       if (_selectedOrders.size > 1) {
@@ -112,17 +115,17 @@ function renderOrdersFromCache() {
       // 缺货计算：单选用该订单自身数量，多选用选中订单汇总数量
       const calcShortage = (it) => {
         const iid = it.item_id;
-        const need = _selectedOrders.size > 1 ? (selectedNeedMap.get(iid) || it.quantity) : it.quantity;
+        const need = _selectedOrders.size > 1 && isSelected ? (selectedNeedMap.get(iid) || it.quantity) : it.quantity;
         const sd = shortageMap.get(iid);
         if (sd) {
-          const stock = _calcStockForItem(sd);
+          const stock = _calcStockForItem(sd, useAllAccounts);
           return Math.max(0, need - stock);
         }
         if (iid.startsWith('__bundle__') && _bundleItemsMap[iid]) {
           for (const subId of _bundleItemsMap[iid]) {
             const sub = shortageMap.get(subId);
             if (sub) {
-              const stock = _calcStockForItem(sub);
+              const stock = _calcStockForItem(sub, useAllAccounts);
               if (stock < need) return 1;
             }
           }
