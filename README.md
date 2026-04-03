@@ -416,6 +416,43 @@ pack.bat
 
 ---
 
+## Acknowledgements
+
+本项目使用了以下第三方服务和开源资源：
+
+### Data & API
+
+| Service | URL | Usage |
+|---------|-----|-------|
+| **ArcTracker** | [arctracker.io](https://arctracker.io/) | 游戏库存数据同步 API |
+| **Arc Raiders** | [arcraiders.com](https://arcraiders.com/) | 游戏官方，物品数据 & 图标来源 |
+| **Steam OpenID** | [steamcommunity.com](https://steamcommunity.com/) | 账号认证（通过 Embark OAuth 流程） |
+| **Claude API** | [anthropic.com](https://www.anthropic.com/) | AI 辅助模糊匹配（可选） |
+
+### Frontend CDN
+
+| Resource | Provider | Usage |
+|----------|----------|-------|
+| **ECharts 5** | [jsDelivr](https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js) | 数据可视化图表 |
+| **Rajdhani / Noto Sans SC** | [Google Fonts](https://fonts.google.com/) | UI 字体 |
+
+### Python Dependencies
+
+| Package | License | Usage |
+|---------|---------|-------|
+| [Flask](https://flask.palletsprojects.com/) | BSD-3-Clause | Web 框架 |
+| [Requests](https://requests.readthedocs.io/) | Apache-2.0 | HTTP 客户端 |
+| [Playwright](https://playwright.dev/python/) | Apache-2.0 | 浏览器自动化（自动登录） |
+| [Jieba](https://github.com/fxsjy/jieba) | MIT | 中文分词（订单文本解析） |
+
+### Disclaimer
+
+- 本项目为第三方工具，与 Arc Raiders 开发商 Embark Studios 无官方关联
+- 游戏物品数据和图标版权归 Embark Studios 所有
+- ArcTracker 为独立第三方平台，本项目通过其公开 API 进行数据同步
+
+---
+
 ## License
 
 MIT License - 详见 [LICENSE](LICENSE) 文件。
@@ -423,5 +460,5 @@ MIT License - 详见 [LICENSE](LICENSE) 文件。
 ---
 
 <p align="center">
-  <sub>Built with Flask & vanilla JS &nbsp;|&nbsp; Game data from <a href="https://arcraiders.com/">Arc Raiders</a></sub>
+  <sub>Built with Flask & vanilla JS &nbsp;|&nbsp; Game data from <a href="https://arcraiders.com/">Arc Raiders</a> &nbsp;|&nbsp; Inventory API by <a href="https://arctracker.io/">ArcTracker</a></sub>
 </p>
