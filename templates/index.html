@@ -230,27 +230,40 @@
 </div>
 
 <!-- ── 订单 ── -->
-<div id="page-orders" class="page" style="flex-direction:row">
-  <!-- 左：订单列表 -->
-  <div class="order-list-pane">
-    <div id="orderToolbar" class="topbar" style="display:none">
-      <span id="completedFilters" style="display:flex;gap:4px;align-items:center">
-        <button class="tag-btn active" onclick="setCompletedDays(0,this)">全部</button>
-        <button class="tag-btn" onclick="setCompletedDays(1,this)">今天</button>
-        <button class="tag-btn" onclick="setCompletedDays(3,this)">3天</button>
-        <button class="tag-btn" onclick="setCompletedDays(7,this)">7天</button>
-        <button class="tag-btn" onclick="setCompletedDays(30,this)">30天</button>
-        <span style="width:1px;height:16px;background:var(--border);margin:0 4px"></span>
-        <input type="date" id="orderDateFrom" style="width:100px;padding:4px 6px;font-size:11px" onchange="setCompletedRange()">
-        <span style="color:var(--text3);font-size:11px">—</span>
-        <input type="date" id="orderDateTo" style="width:100px;padding:4px 6px;font-size:11px" onchange="setCompletedRange()">
-      </span>
-      <div style="flex:1"></div>
-      <button class="btn small" id="exportDailyBtn" style="display:none;border-color:var(--accent);color:var(--accent)" onclick="exportDailyReport()">导出日报</button>
+<div id="page-orders" class="page">
+  <div id="orderToolbar" class="topbar" style="display:none">
+    <span id="completedFilters" style="display:flex;gap:4px;align-items:center">
+      <button class="tag-btn active" onclick="setCompletedDays(0,this)">全部</button>
+      <button class="tag-btn" onclick="setCompletedDays(1,this)">今天</button>
+      <button class="tag-btn" onclick="setCompletedDays(3,this)">3天</button>
+      <button class="tag-btn" onclick="setCompletedDays(7,this)">7天</button>
+      <button class="tag-btn" onclick="setCompletedDays(30,this)">30天</button>
+      <span style="width:1px;height:16px;background:var(--border);margin:0 4px"></span>
+      <input type="date" id="orderDateFrom" style="width:120px;padding:4px 6px;font-size:11px" onchange="setCompletedRange()">
+      <span style="color:var(--text3);font-size:11px">—</span>
+      <input type="date" id="orderDateTo" style="width:120px;padding:4px 6px;font-size:11px" onchange="setCompletedRange()">
+    </span>
+    <div style="flex:1"></div>
+    <button class="btn small" id="exportDailyBtn" style="display:none;border-color:var(--accent);color:var(--accent)" onclick="exportDailyReport()">导出日报</button>
+  </div>
+  <div class="content">
+    <div class="card">
+      <table>
+        <thead><tr>
+          <th style="width:36px"><input type="checkbox" id="orderCheckAll" onchange="toggleAllOrders(this.checked)" title="全选/取消全选" style="width:auto"></th>
+          <th style="width:80px;white-space:nowrap"># <label style="font-weight:400;font-size:11px;color:var(--text3);margin-left:6px;cursor:pointer"><input type="checkbox" id="orderMultiSelect" onchange="toggleOrderMultiSelect(this.checked)" style="width:auto;vertical-align:middle;cursor:pointer"> 多选</label></th>
+          <th>客户 / 物品</th>
+          <th style="width:50px" class="col-num">数量</th>
+          <th style="width:80px" class="col-num">成本</th>
+          <th style="width:80px" class="col-num">售价</th>
+          <th style="width:80px" class="col-num">利润</th>
+          <th style="width:130px">时间</th>
+          <th style="width:140px"></th>
+        </tr></thead>
+        <tbody id="ordersBody"></tbody>
+      </table>
     </div>
-    <div class="order-list-scroll">
-      <div id="ordersListContainer"></div>
-      <div id="shortageSection">
+    <div id="shortageSection" style="padding:12px 0">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:12px">
         <button class="tag-btn active" id="tabShortage" onclick="switchListTab('shortage')">补货清单</button>
@@ -258,14 +271,12 @@
       </div>
       <div style="display:flex;align-items:center;gap:8px">
         <button class="tag-btn active" id="shortageToggle" onclick="toggleShortageView(this)" style="font-size:11px">只看缺货</button>
-        <button class="btn small" onclick="exportShortageText()" style="border-color:var(--danger);color:var(--danger)">📋 导出缺货</button>
+        <button class="btn small" onclick="exportShortageText()" style="border-color:var(--danger);color:var(--danger)">导出缺货</button>
       </div>
     </div>
-    <!-- 账号筛选栏 -->
     <div id="stockAccountBar" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:8px 12px;background:var(--bg1);border:1px solid var(--border);border-radius:8px">
       <span style="font-size:11px;color:var(--text3);margin-right:4px;white-space:nowrap">选择账号：</span>
     </div>
-    <!-- 补货清单 -->
     <div class="card" id="shortageCard">
       <table>
         <thead><tr>
@@ -281,7 +292,6 @@
         <tbody id="shortageBody"></tbody>
       </table>
     </div>
-    <!-- 存货分布 -->
     <div class="card" id="instockCard" style="display:none">
       <table>
         <thead><tr>
@@ -296,17 +306,6 @@
       </table>
     </div>
     </div>
-    </div>
-  </div>
-  <!-- 右：订单详情面板 -->
-  <div class="order-detail-pane" id="orderDetailPane">
-    <div class="order-detail-empty" id="orderDetailEmpty">
-      <div style="color:var(--text3);font-size:13px;text-align:center;padding:48px 24px">
-        <div style="font-size:32px;margin-bottom:12px;opacity:.3">📋</div>
-        点击左侧订单查看详情
-      </div>
-    </div>
-    <div id="orderDetailContent" style="display:none"></div>
   </div>
 </div>
 

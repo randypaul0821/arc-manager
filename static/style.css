@@ -690,49 +690,4 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .order-selected td { background: rgba(134,120,255,.05) !important; }
 .order-selected:hover td { background: rgba(134,120,255,.08) !important; }
 
-/* ── 订单页分栏布局 ── */
-.order-list-pane {
-  flex: 1; min-width: 0; display: flex; flex-direction: column;
-  border-right: 1px solid var(--border);
-}
-.order-list-scroll { flex: 1; overflow-y: auto; }
-.order-detail-pane {
-  width: 380px; flex-shrink: 0; overflow-y: auto;
-  background: var(--bg1); display: flex; flex-direction: column;
-}
-.order-detail-pane .detail-header {
-  padding: 14px 16px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
-  flex-shrink: 0;
-}
-.order-detail-pane .detail-body { padding: 0; flex: 1; overflow-y: auto; }
-.order-detail-pane .detail-section {
-  padding: 12px 16px; border-bottom: 1px solid var(--border);
-}
-.order-detail-pane .detail-section-title {
-  font-size: 11px; font-weight: 600; color: var(--text3);
-  text-transform: uppercase; letter-spacing: .4px; margin-bottom: 8px;
-}
-.order-detail-pane .detail-actions {
-  padding: 12px 16px; border-top: 1px solid var(--border);
-  display: flex; gap: 6px; flex-shrink: 0;
-}
-/* 订单列表行 — 新样式 */
-.order-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 14px; border-bottom: 1px solid var(--border);
-  cursor: pointer; transition: background .08s;
-}
-.order-row:hover { background: rgba(255,255,255,.02); }
-.order-row.active { background: var(--accent-light); border-left: 2px solid var(--accent); }
-.order-row.faded { opacity: .4; }
-.order-row.faded:hover { opacity: .65; }
-.order-row .order-row-check { flex-shrink: 0; }
-.order-row .order-row-main { flex: 1; min-width: 0; }
-.order-row .order-row-name { font-size: 13px; font-weight: 600; color: var(--text1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.order-row .order-row-sub { font-size: 11px; color: var(--text3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.order-row .order-row-meta { flex-shrink: 0; text-align: right; }
-.order-row .order-row-amount { font-size: 13px; font-weight: 600; color: var(--text1); font-variant-numeric: tabular-nums; }
-.order-row .order-row-time { font-size: 11px; color: var(--text3); margin-top: 2px; }
-
 /* ── 缺货面板 ── */
