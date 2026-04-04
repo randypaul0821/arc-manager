@@ -94,6 +94,9 @@ const inv = {
 
   // 集齐状态 { accId: Set([itemId, ...]) }，loadInventory 时清除
   gathered: {},
+
+  // 合成数据缓存 { item_id: { accounts: [{account_id, craftable, ...}] } }
+  craftCache: {},
 };
 
 // ─── 3. 数据层 ────────────────────────────────────────────────
@@ -352,6 +355,34 @@ function invSetRarity(r) {
 function invSetSearch(val) {
   inv.search = val;
   _invRenderRow3();
+  _invLoadCraftData();
+}
+
+// 加载搜索结果中有 recipe 的物品的合成数据
+let _craftLoadTimer = null;
+function _invLoadCraftData() {
+  clearTimeout(_craftLoadTimer);
+  if (!inv.search) return;
+  // 防抖：300ms 后执行
+  _craftLoadTimer = setTimeout(async () => {
+    const filtered = inv.items.filter(it =>
+      (it.name_zh || '').toLowerCase().includes(inv.search.toLowerCase()) ||
+      (it.name_en || '').toLowerCase().includes(inv.search.toLowerCase()) ||
+      it.item_id.includes(inv.search.toLowerCase())
+    );
+    // 找出有 recipe 的物品（从 gameItems 中查找）
+    for (const it of filtered) {
+      if (inv.craftCache[it.item_id]) continue; // 已有缓存
+      const gameItem = inv.gameItems.find(g => g.item_id === it.item_id);
+      if (!gameItem || !gameItem.recipe || !Object.keys(gameItem.recipe).length) continue;
+      // 异步加载
+      const data = await api(`/api/craft/craftable?item_id=${it.item_id}`);
+      if (data && data.accounts) {
+        inv.craftCache[it.item_id] = data;
+        _invRenderRow3(); // 刷新显示
+      }
+    }
+  }, 300);
 }
 
 // ─── 7. 第二栏：账号选择器 ───────────────────────────────────
@@ -529,10 +560,20 @@ function _buildCardTile(item, accId, rules, bundled, gathered) {
     watchStatus === 'short' ? '⚠ 关注物品缺货' : '',
   ].filter(Boolean).join('\n');
 
+  // 合成数量（如果有缓存数据）
+  const craftData = inv.craftCache[item.item_id];
+  let craftQty = 0;
+  if (craftData && craftData.accounts) {
+    const accCraft = craftData.accounts.find(a => a.account_id === accId);
+    if (accCraft) craftQty = accCraft.craftable || 0;
+  }
+  const craftLabel = craftQty > 0 ? `<span class="tile-craft">+${craftQty}</span>` : '';
+
   return `
     <div class="inv-tile ${breatheClass}" data-tip="${_esc(tooltip)}">
       <img src="/api/items/${item.item_id}/image" onerror="this.style.opacity=.2">
       <span class="tile-qty" style="color:${qtyColor}">×${qty}</span>
+      ${craftLabel}
       ${_isStarredFor(item.item_id, rules) ? '<span class="tile-star">★</span>' : ''}
       ${bname ? '<span class="tile-bundle">套</span>' : ''}
       ${lvl ? `<span class="tile-dot" style="background:${lvl === 'red' ? 'var(--danger)' : 'var(--warning)'}"></span>` : ''}

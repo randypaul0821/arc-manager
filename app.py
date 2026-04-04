@@ -28,6 +28,7 @@ from routes.orders    import orders_bp
 from routes.customers import customers_bp
 from routes.watchlist import watchlist_bp
 from routes.settings import settings_bp
+from routes.craft import craft_bp
 
 app.register_blueprint(items_bp)
 app.register_blueprint(inventory_bp)
@@ -37,6 +38,7 @@ app.register_blueprint(orders_bp)
 app.register_blueprint(customers_bp)
 app.register_blueprint(watchlist_bp)
 app.register_blueprint(settings_bp)
+app.register_blueprint(craft_bp)
 
 # ───────── 全局错误处理 ─────────
 logger = logging.getLogger("app")

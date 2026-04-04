@@ -211,6 +211,7 @@ def _build_item(item_id, meta, ov, alias_list) -> dict:
         "alert_min":       ov.get("alert_min", 0),
         "alert_enabled":   ov.get("alert_enabled", 0),
         "aliases":         alias_list,
+        "recipe":          meta.get("recipe", {}),
     }
 
 

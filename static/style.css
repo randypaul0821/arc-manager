@@ -364,6 +364,11 @@ tr:hover td { background:rgba(255,255,255,.015); }
   position: absolute; top: 3px; right: 3px;
   width: 6px; height: 6px; border-radius: 50%; z-index: 2;
 }
+.inv-tile .tile-craft {
+  position: absolute; top: 2px; right: 3px;
+  font-size: 9px; font-weight: 700; color: var(--accent); line-height: 1;
+  text-shadow: 0 0 4px #000, 0 0 4px #000; z-index: 2;
+}
 
 /* ── 即时 tooltip 浮层 ── */
 #globalTip {

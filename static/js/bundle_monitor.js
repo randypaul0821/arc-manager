@@ -508,6 +508,8 @@ async function _bmLoadRestock() {
   }
   text = text.trimEnd();
 
+  el.style.display = 'flex';
+  el.style.flexDirection = 'column';
   el.innerHTML = `<textarea id="bmRestockText" readonly style="width:100%;flex:1;font-size:13px;line-height:1.8;background:var(--bg2);color:var(--text1);border:1px solid var(--border);border-radius:6px;padding:12px;font-family:inherit;resize:none">${text}</textarea>`;
 }
 
