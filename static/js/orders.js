@@ -7,15 +7,19 @@ let _completedFrom = '';
 let _completedTo   = '';
 const _selectedOrders = new Set();
 let _orderMultiSelect = localStorage.getItem('order_multi_select') === '1';
+let _orderDetailId = null; // 当前展开详情的订单ID
 
 function setOrderTab(status, btn) {
   state.orders.activeTab = status;
-  document.querySelectorAll('[id^="otab_"]').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+  // 更新 sidebar 子菜单 active 状态
+  document.querySelectorAll('#orderSubNav .nav-sub-item[data-tab]').forEach(b => b.classList.remove('active'));
+  const subItem = document.querySelector(`#orderSubNav .nav-sub-item[data-tab="${status}"]`);
+  if (subItem) subItem.classList.add('active');
   const shortageEl = document.getElementById('shortageSection');
   if (shortageEl) shortageEl.style.display = status === 'pending' ? '' : 'none';
-  const filtersEl = document.getElementById('completedFilters');
-  if (filtersEl) filtersEl.style.display = status === 'completed' ? 'inline-flex' : 'none';
+  // 显隐 completed 筛选工具栏
+  const toolbar = document.getElementById('orderToolbar');
+  if (toolbar) toolbar.style.display = status === 'completed' ? '' : 'none';
   const exportBtn = document.getElementById('exportDailyBtn');
   if (exportBtn) exportBtn.style.display = status === 'completed' ? '' : 'none';
   loadOrders();
@@ -88,113 +92,74 @@ function renderOrdersFromCache() {
   const isPending = status === 'pending';
   const isCompleted = status === 'completed';
 
-  // 单行渲染
-  const renderRow = (o, idx) => {
-    const items   = o.items || [];
-    const cost    = o.total_cost || 0;
-    const revenue = o.total_revenue || 0;
-    const profit  = revenue - cost;
-    const isSelected = _selectedOrders.has(o.id);
-
-    let itemsHtml = '';
-    if (isPending) {
-      // 用 Map 替代 find，O(1) 查找
-      const shortageMap = new Map(_shortageData.map(s => [s.item_id, s]));
-      // 未选中的订单用全部账号库存计算，不受账号筛选影响
-      const useAllAccounts = !isSelected;
-      // 汇总所有选中订单的物品需求量，用于多选时的缺货计算
-      const selectedNeedMap = new Map();
-      if (_selectedOrders.size > 1) {
-        for (const so of orders) {
-          if (!_selectedOrders.has(so.id)) continue;
-          for (const si of (so.items || [])) {
-            selectedNeedMap.set(si.item_id, (selectedNeedMap.get(si.item_id) || 0) + si.quantity);
-          }
-        }
+  // ── 缺货预计算（待处理用） ──
+  const shortageMap = isPending ? new Map(_shortageData.map(s => [s.item_id, s])) : null;
+  const selectedNeedMap = new Map();
+  if (isPending && _selectedOrders.size > 1) {
+    for (const so of orders) {
+      if (!_selectedOrders.has(so.id)) continue;
+      for (const si of (so.items || [])) {
+        selectedNeedMap.set(si.item_id, (selectedNeedMap.get(si.item_id) || 0) + si.quantity);
       }
-      // 缺货计算：单选用该订单自身数量，多选用选中订单汇总数量
-      const calcShortage = (it) => {
-        const iid = it.item_id;
-        const need = _selectedOrders.size > 1 && isSelected ? (selectedNeedMap.get(iid) || it.quantity) : it.quantity;
-        const sd = shortageMap.get(iid);
-        if (sd) {
-          const stock = _calcStockForItem(sd, useAllAccounts);
-          return Math.max(0, need - stock);
-        }
-        if (iid.startsWith('__bundle__') && _bundleItemsMap[iid]) {
-          for (const subId of _bundleItemsMap[iid]) {
-            const sub = shortageMap.get(subId);
-            if (sub) {
-              const stock = _calcStockForItem(sub, useAllAccounts);
-              if (stock < need) return 1;
-            }
-          }
-          return 0;
-        }
-        return it.shortage || 0;
-      };
-      // 每个物品只算一次
-      const itemShortages = items.map(it => ({ ...it, _shortage: calcShortage(it) }));
-      const shortItems = itemShortages.filter(it => it._shortage > 0 && !_shortageGathered.has(it.item_id))
-                                      .map(it => ({ ...it, shortage: it._shortage }));
-      const okItems    = itemShortages.filter(it => it._shortage === 0 || _shortageGathered.has(it.item_id));
-
-      const makeShortTag = it => `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 9px;border-radius:4px;font-size:12px;font-weight:600;margin:2px;background:rgba(240,68,68,.12);color:var(--danger);border:1px solid rgba(240,68,68,.25)">${it.name_zh||it.raw_name} <b>×${it.quantity}</b></span>`;
-      const makeOkTag   = it => `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 9px;border-radius:4px;font-size:12px;margin:2px;background:rgba(52,211,153,.08);color:var(--success);border:1px solid rgba(52,211,153,.2)">${it.name_zh||it.raw_name} ×${it.quantity}</span>`;
-
-      const THRESHOLD = 8;
-      const allTags   = shortItems.map(makeShortTag).concat(okItems.map(makeOkTag));
-      const needFold  = allTags.length > THRESHOLD;
-      const visibleHtml = allTags.slice(0, THRESHOLD).join('');
-      const hiddenHtml  = needFold ? allTags.slice(THRESHOLD).join('') : '';
-
-      const foldBtn  = needFold ? `<button id="obtn_${o.id}" onclick="toggleOrderItems(${o.id})" style="display:none;cursor:pointer;font-size:11px;color:var(--accent);padding:2px 7px;border:1px solid var(--accent);border-radius:4px;margin:2px;background:none;font-family:inherit">+${allTags.length - THRESHOLD} 展开</button>` : '';
-      const foldArea = needFold ? `<span id="omore_${o.id}" style="display:inline">${hiddenHtml}<button onclick="toggleOrderItems(${o.id})" style="cursor:pointer;font-size:11px;color:var(--accent);padding:2px 7px;border:1px solid var(--accent);border-radius:4px;margin:2px;background:none;font-family:inherit">收起</button></span>` : '';
-
-      itemsHtml = shortItems.length === 0
-        ? `<span style="font-size:12px;color:var(--success)">✓ 所有物品已备齐（共${items.length}件）</span>`
-        : visibleHtml + foldBtn + foldArea;
-    } else {
-      const SHOW = 4;
-      itemsHtml = items.slice(0, SHOW).map(it =>
-        `<span style="font-size:11px;color:var(--text3);margin:0 4px 0 0">${it.name_zh||it.raw_name} ×${it.quantity}</span>`
-      ).join('') + (items.length > SHOW ? `<span style="font-size:11px;color:var(--text3)">+${items.length-SHOW}件</span>` : '');
     }
-
-    const costColor   = '#e8925a';
-    const revColor    = '#8b9cf7';
-    const profitColor = profit >= 0 ? '#5ec484' : '#f06060';
-    const rowBg = isPending ? '' : 'opacity:.8';
-    const cc = (v,c) => `<span style="color:${c}">${v}</span>`;
-    const timeStr = isCompleted ? fmtTime(o.completed_at) : fmtTime(o.created_at);
-
-    const chk = _selectedOrders.has(o.id);
-    return `<tr id="orow_${o.id}" style="${rowBg}${isPending && !chk ? ';opacity:.5' : ''}">
-      <td style="text-align:center">${isPending ? `<input type="checkbox" ${chk?'checked':''} onchange="toggleOrderSelect(${o.id},this.checked)" style="cursor:pointer;width:16px;height:16px">` : ''}</td>
-      <td style="color:var(--text3);font-size:12px;text-align:center;cursor:pointer" onclick="this.parentElement.querySelector('input[type=checkbox]')?.click()">${idx}</td>
-      <td style="cursor:pointer" onclick="this.parentElement.querySelector('input[type=checkbox]')?.click()">
-        ${o.customer_name ? `<div style="font-weight:600;font-size:13px;margin-bottom:4px">${o.customer_name}</div>` : ''}
-        <div style="display:flex;flex-wrap:wrap;align-items:center">${itemsHtml}</div>
-      </td>
-      <td class="col-num" style="color:var(--text2)">${items.length||'—'}</td>
-      <td class="col-num">${cc(fmtPrice(cost), cost ? costColor : 'var(--text3)')}</td>
-      <td class="col-num">${cc(fmtPrice(revenue), revenue ? revColor : 'var(--text3)')}</td>
-      <td class="col-num">${cc((profit>=0?'+':'')+fmtPrice(profit), (cost||revenue) ? profitColor : 'var(--text3)')}</td>
-      <td style="color:var(--text2);font-size:12px;white-space:nowrap">${timeStr}</td>
-      <td>
-        <div style="display:flex;gap:4px;flex-wrap:nowrap">
-          <button class="btn small" onclick="openOrderDetail(${o.id})">详情</button>
-          ${isPending?`<button class="btn small success" onclick="completeOrder(${o.id})">完成</button>`:''}
-          ${isPending?`<button class="btn small danger" onclick="cancelOrder(${o.id})">取消</button>`:''}
-          <button class="btn small danger" onclick="deleteOrder(${o.id})">删</button>
-        </div>
-      </td>
-    </tr>`;
+  }
+  const calcShortage = (it, isSelected) => {
+    if (!isPending || !shortageMap) return 0;
+    const iid = it.item_id;
+    const useAll = !isSelected;
+    const need = _selectedOrders.size > 1 && isSelected ? (selectedNeedMap.get(iid) || it.quantity) : it.quantity;
+    const sd = shortageMap.get(iid);
+    if (sd) { const stock = _calcStockForItem(sd, useAll); return Math.max(0, need - stock); }
+    if (iid.startsWith('__bundle__') && _bundleItemsMap[iid]) {
+      for (const subId of _bundleItemsMap[iid]) {
+        const sub = shortageMap.get(subId);
+        if (sub && _calcStockForItem(sub, useAll) < need) return 1;
+      }
+      return 0;
+    }
+    return it.shortage || 0;
   };
 
+  // ── 单行渲染（简化版：行卡片） ──
+  const renderRow = (o, idx) => {
+    const items = o.items || [];
+    const revenue = o.total_revenue || 0;
+    const isSelected = _selectedOrders.has(o.id);
+    const timeStr = isCompleted ? fmtTime(o.completed_at) : fmtTime(o.created_at);
+
+    let statusHtml = '';
+    if (isPending) {
+      const itemShortages = items.map(it => ({ ...it, _shortage: calcShortage(it, isSelected) }));
+      const shortCount = itemShortages.filter(it => it._shortage > 0 && !_shortageGathered.has(it.item_id)).length;
+      const readyCount = items.length - shortCount;
+      statusHtml = shortCount === 0
+        ? `<span style="color:var(--success);font-size:11px">✓ ${items.length}件备齐</span>`
+        : `<span style="color:var(--text3);font-size:11px">${readyCount}/${items.length} 备齐</span> <span style="color:var(--danger);font-size:11px">缺${shortCount}件</span>`;
+    } else {
+      statusHtml = `<span style="font-size:11px;color:var(--text3)">${items.length}件物品</span>`;
+    }
+
+    const isActive = _orderDetailId === o.id;
+    const chk = _selectedOrders.has(o.id);
+    const fadeCls = isPending && !chk ? ' faded' : '';
+    return `<div class="order-row${isActive ? ' active' : ''}${fadeCls}" id="orow_${o.id}" onclick="openOrderDetail(${o.id})">
+      ${isPending ? `<div class="order-row-check" onclick="event.stopPropagation()"><input type="checkbox" class="ck" ${chk?'checked':''} onchange="toggleOrderSelect(${o.id},this.checked)"></div>` : ''}
+      <div class="order-row-main">
+        <div class="order-row-name">${o.customer_name || '订单 #'+o.id}</div>
+        <div class="order-row-sub">${statusHtml}</div>
+      </div>
+      <div class="order-row-meta">
+        <div class="order-row-amount">${revenue ? '¥'+fmtPrice(revenue) : ''}</div>
+        <div class="order-row-time">${timeStr}</div>
+      </div>
+    </div>`;
+  };
+
+  const container = document.getElementById('ordersListContainer');
+  if (!container) return;
+
   if (!orders.length) {
-    document.getElementById('ordersBody').innerHTML =
-      `<tr><td colspan="9" class="empty">暂无${isPending?'待处理':isCompleted?'已完成':'已归档'}订单</td></tr>`;
+    container.innerHTML = `<div class="empty">暂无${isPending?'待处理':isCompleted?'已完成':'已归档'}订单</div>`;
     return;
   }
 
@@ -213,25 +178,14 @@ function renderOrdersFromCache() {
     let globalIdx = 0;
     for (const date of dates) {
       const dayOrders = groups[date];
-      const dayCost   = dayOrders.reduce((s,o) => s + (o.total_cost||0), 0);
       const dayRev    = dayOrders.reduce((s,o) => s + (o.total_revenue||0), 0);
-      const dayProfit = dayRev - dayCost;
-      const dayItems  = dayOrders.reduce((s,o) => s + (o.items||[]).length, 0);
 
-      // 日期头：每个 td 对齐表头列，背景更醒目
-      html += `<tr style="background:rgba(104,114,229,.08);border-top:2px solid var(--border)">
-        <td style="border-bottom:2px solid rgba(104,114,229,.4)"></td>
-        <td style="border-bottom:2px solid rgba(104,114,229,.4);padding:8px 12px">
-          <span style="font-size:14px;font-weight:700;color:var(--accent)">${date}</span>
-          <span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:rgba(104,114,229,.2);color:var(--accent)">${dayOrders.length} 单</span>
-        </td>
-        <td class="col-num" style="border-bottom:2px solid rgba(104,114,229,.4);font-size:13px;color:var(--text1);font-weight:700">${dayItems}</td>
-        <td class="col-num" style="border-bottom:2px solid rgba(104,114,229,.4);font-size:13px;color:#e8925a;font-weight:700">${fmtPrice(dayCost)}</td>
-        <td class="col-num" style="border-bottom:2px solid rgba(104,114,229,.4);font-size:13px;color:#8b9cf7;font-weight:700">${fmtPrice(dayRev)}</td>
-        <td class="col-num" style="border-bottom:2px solid rgba(104,114,229,.4);font-size:13px;color:${dayProfit>=0?'#5ec484':'#f06060'};font-weight:700">${(dayProfit>=0?'+':'')+fmtPrice(dayProfit)}</td>
-        <td style="border-bottom:2px solid rgba(104,114,229,.4)"></td>
-        <td style="border-bottom:2px solid rgba(104,114,229,.4)"></td>
-      </tr>`;
+      // 日期分组头
+      html += `<div style="padding:8px 14px;background:var(--accent-light);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <div><span style="font-size:13px;font-weight:700;color:var(--accent)">${date}</span>
+          <span style="margin-left:8px;padding:1px 7px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(134,120,255,.15);color:var(--accent)">${dayOrders.length} 单</span></div>
+        <span style="font-size:12px;font-weight:600;color:var(--text2)">¥${fmtPrice(dayRev)}</span>
+      </div>`;
 
       for (const o of dayOrders) {
         globalIdx++;
@@ -239,24 +193,10 @@ function renderOrdersFromCache() {
       }
     }
 
-    // 总汇总
-    const sumCost   = orders.reduce((s,o) => s + (o.total_cost||0), 0);
-    const sumRev    = orders.reduce((s,o) => s + (o.total_revenue||0), 0);
-    const sumProfit = sumRev - sumCost;
-    const sumItems  = orders.reduce((s,o) => s + (o.items||[]).length, 0);
-    html += `<tr style="border-top:2px solid var(--border);background:var(--bg2)">
-      <td colspan="2" style="text-align:right;padding-right:12px;font-size:12px;color:var(--text3);font-weight:600">合计 ${orders.length} 单</td>
-      <td class="col-num" style="color:var(--text2)">${sumItems}</td>
-      <td class="col-num" style="color:#e8925a">${fmtPrice(sumCost)}</td>
-      <td class="col-num" style="color:#8b9cf7">${fmtPrice(sumRev)}</td>
-      <td class="col-num" style="color:${sumProfit>=0?'#5ec484':'#f06060'}">${(sumProfit>=0?'+':'')+fmtPrice(sumProfit)}</td>
-      <td colspan="2"></td>
-    </tr>`;
-
-    document.getElementById('ordersBody').innerHTML = html;
+    container.innerHTML = html;
   } else {
-    // 待处理/已归档：原来的平铺方式
-    document.getElementById('ordersBody').innerHTML = orders.map((o, idx) => renderRow(o, idx + 1)).join('');
+    // 待处理/已归档：平铺行卡片
+    container.innerHTML = orders.map((o, idx) => renderRow(o, idx + 1)).join('');
   }
   if (isPending) _updateOrderCheckAll();
 }
@@ -404,86 +344,87 @@ function downloadExportText() {
 // ══════════ 订单详情 ══════════
 
 async function openOrderDetail(id) {
+  _orderDetailId = id;
+  // 高亮当前行
+  document.querySelectorAll('.order-row').forEach(r => r.classList.remove('active'));
+  const row = document.getElementById('orow_' + id);
+  if (row) row.classList.add('active');
+
   const order = await api(`/api/orders/${id}`);
   const el = document.getElementById('orderDetailContent');
+  const emptyEl = document.getElementById('orderDetailEmpty');
+  if (emptyEl) emptyEl.style.display = 'none';
+  el.style.display = '';
+
   const items = order.items || [];
   const isPending = order.status === 'pending';
-
   const totalCost = items.reduce((s,it) => s + (it.cost_price||0) * it.quantity, 0);
   const totalSell = items.reduce((s,it) => s + (it.sell_price||0) * it.quantity, 0);
   const totalProfit = totalSell - totalCost;
 
   el.innerHTML = `
-    <div style="margin-bottom:16px"><h3>订单 #${order.id}</h3></div>
-    <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-      <div style="flex:1">
-        <label class="form-label">客户名</label>
-        <input type="text" id="detailCustomer" value="${order.customer_name||''}" placeholder="客户名...">
+    <div class="detail-header">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:var(--text1)">${order.customer_name || '订单 #'+order.id}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${fmtTime(order.created_at)} · ${items.length}件物品</div>
       </div>
-      <div style="display:flex;align-items:flex-end;gap:8px">
-        <button class="btn small" onclick="saveOrderCustomer(${id})">保存</button>
+      <div style="display:flex;gap:4px">
+        ${isPending ? `<button class="btn small" style="color:var(--success);border-color:var(--success)" onclick="completeOrder(${id},true)">完成</button>` : ''}
+        ${isPending ? `<button class="btn small" style="color:var(--danger);border-color:var(--danger)" onclick="cancelOrder(${id},true)">取消</button>` : ''}
+        <button class="btn small" style="color:var(--danger);border-color:var(--danger)" onclick="deleteOrder(${id})">删除</button>
       </div>
     </div>
-    <div style="margin-bottom:16px">
-      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">订单物品</div>
-      <table>
-        <thead><tr>
-          <th style="width:44px"></th><th>物品</th><th>英文名</th><th style="width:48px">数量</th>
-          <th style="width:72px;text-align:right;padding-right:10px">成本</th>
-          <th style="width:72px;text-align:right;padding-right:10px">售价</th>
-          <th style="width:72px;text-align:right;padding-right:10px">利润</th>
-          <th style="width:36px;text-align:center">状态</th>
-        </tr></thead>
-        <tbody>
-          ${items.map(it => {
-            const isReady = !isPending || it.ready || _shortageGathered.has(it.item_id);
-            const itemProfit = ((it.sell_price||0) - (it.cost_price||0)) * it.quantity;
-            const isBundle = it.is_bundle || (it.item_id||'').startsWith('__bundle__');
-            const displayName = it.name_zh || (isBundle ? '📦 套餐 #'+it.item_id.replace('__bundle__','') : it.item_id);
-            const isUnresolved = !it.name_zh || it.name_zh === it.item_id || it.name_zh.startsWith('__bundle__')
-              || (!isBundle && it.raw_name && /modded.?weapon|改装武器|\(plan\s|方案\s/i.test(it.raw_name));
-            const hl = highlightMatch(it.raw_name, it.name_en);
-            const matchIcon = isBundle ? '' : (hl.ratio >= 0.8 ? '✅' : hl.ratio >= 0.5 ? '⚠️' : hl.ratio > 0 ? '❓' : '');
-            return `
-          <tr id="oirow_${it.id}">
-            <td>${isBundle
-              ? '<span style="font-size:22px;display:flex;align-items:center;justify-content:center">📦</span>'
-              : `<img class="item-img" src="/api/items/${it.item_id}/image" onerror="this.style.opacity=.2">`}</td>
-            <td style="font-size:13px;position:relative" id="oicell_${it.id}">
-              <div style="display:flex;align-items:center;gap:4px">
-                ${isPending ? `<div onclick="startItemSwap(${it.id},'${id}')" style="cursor:pointer;flex:1;min-width:0" title="点击更换物品">` : '<div style="flex:1;min-width:0">'}
-                  <div style="font-weight:600;color:var(--text1)">${displayName}${isPending ? ' <span style="font-size:10px;color:var(--text3)">✎</span>' : ''}</div>
-                  ${it.raw_name && it.raw_name !== it.name_zh && it.raw_name !== it.name_en ? `<div style="font-size:11px;color:var(--text3);margin-top:1px">${it.raw_name}</div>` : ''}
-                </div>
-                ${isPending && isUnresolved ? `<button class="btn small" onclick="event.stopPropagation();rematchItem(${it.id},'${id}')" style="flex-shrink:0;font-size:10px;padding:2px 6px;border-color:var(--accent2);color:var(--accent2)" title="重新匹配">🔄</button>` : ''}
-              </div>
-            </td>
-            <td style="font-size:13px">${isBundle
-                ? `<span style="color:var(--text2)">${it.name_en || '套餐'}</span>`
-                : `<div>${hl.matched || ''}</div>${matchIcon ? `<span style="font-size:10px">${matchIcon}</span>` : ''}`}</td>
-            <td style="font-size:13px;font-weight:600;color:var(--text1)">×${it.quantity}</td>
-            <td style="padding:2px 4px"><input type="number" class="ghost-input oi-price" data-id="${it.id}" data-qty="${it.quantity}" data-field="cost"
-              value="${it.cost_price||0}" min="0" step="0.1" onfocus="this.select()" oninput="recalcOrderTotals()" onblur="autoSaveItemPrice(this,${id})"></td>
-            <td style="padding:2px 4px"><input type="number" class="ghost-input oi-price" data-id="${it.id}" data-qty="${it.quantity}" data-field="sell"
-              value="${it.sell_price||0}" min="0" step="0.1" onfocus="this.select()" oninput="recalcOrderTotals()" onblur="autoSaveItemPrice(this,${id})"></td>
-            <td class="num-cell oi-profit" data-id="${it.id}" style="color:${itemProfit>=0?'#5ec484':'#f06060'}">${itemProfit>=0?'+':''}${fmtPrice(itemProfit)}</td>
-            <td style="text-align:center"><button class="ready-btn" onclick="toggleReady(${it.id},${isReady?0:1})" title="点击切换">${isReady ? '✅' : '❗'}</button></td>
-          </tr>`;}).join('')}
-        </tbody>
-        <tfoot><tr style="border-top:2px solid var(--border)">
-            <td colspan="4" style="text-align:right;padding-right:8px;font-size:11px;color:var(--text3)">合计</td>
-            <td class="num-cell" id="detailTotalCost" style="padding-top:10px;padding-bottom:10px;color:#e8925a">${fmtPrice(totalCost)}</td>
-            <td class="num-cell" id="detailTotalSell" style="padding-top:10px;padding-bottom:10px;color:#8b9cf7">${fmtPrice(totalSell)}</td>
-            <td class="num-cell" id="detailTotalProfit" style="padding-top:10px;padding-bottom:10px;color:${totalProfit>=0?'#5ec484':'#f06060'}">${totalProfit>=0?'+':''}${fmtPrice(totalProfit)}</td>
-            <td></td>
-        </tr></tfoot>
-      </table>
-    </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end">
-      ${isPending?`<button class="btn success" onclick="completeOrder(${id},true)">✓ 完成订单</button>
-      <button class="btn danger" onclick="cancelOrder(${id},true)">✕ 取消订单</button>`:''}
+    <div class="detail-body">
+      <!-- 客户 -->
+      <div class="detail-section">
+        <div class="detail-section-title">客户</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="text" id="detailCustomer" value="${order.customer_name||''}" placeholder="客户名..." style="flex:1;font-size:13px;padding:6px 10px">
+          <button class="btn small" onclick="saveOrderCustomer(${id})">保存</button>
+        </div>
+      </div>
+      <!-- 金额汇总 -->
+      <div class="detail-section" style="display:flex;gap:0;padding:0">
+        <div style="flex:1;text-align:center;padding:10px 0">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:4px">成本</div>
+          <div id="detailTotalCost" style="font-size:16px;font-weight:700;color:var(--danger)">${fmtPrice(totalCost)}</div>
+        </div>
+        <div style="width:1px;background:var(--border)"></div>
+        <div style="flex:1;text-align:center;padding:10px 0">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:4px">售价</div>
+          <div id="detailTotalSell" style="font-size:16px;font-weight:700;color:var(--text1)">${fmtPrice(totalSell)}</div>
+        </div>
+        <div style="width:1px;background:var(--border)"></div>
+        <div style="flex:1;text-align:center;padding:10px 0">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:4px">利润</div>
+          <div id="detailTotalProfit" style="font-size:16px;font-weight:700;color:${totalProfit>=0?'var(--success)':'var(--danger)'}">${totalProfit>=0?'+':''}${fmtPrice(totalProfit)}</div>
+        </div>
+      </div>
+      <!-- 物品列表 -->
+      <div style="padding:10px 16px 6px"><span class="detail-section-title">物品 (${items.length})</span></div>
+      ${items.map(it => {
+        const isReady = !isPending || it.ready || _shortageGathered.has(it.item_id);
+        const isBundle = it.is_bundle || (it.item_id||'').startsWith('__bundle__');
+        const displayName = it.name_zh || (isBundle ? '📦 '+it.item_id.replace('__bundle__','') : it.item_id);
+        return `
+        <div id="oirow_${it.id}" style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--border)">
+          <div style="width:36px;height:36px;flex-shrink:0;border-radius:6px;background:var(--bg2);border:1px solid var(--border);overflow:hidden;display:flex;align-items:center;justify-content:center">
+            ${isBundle ? '<span style="font-size:18px">📦</span>' : `<img src="/api/items/${it.item_id}/image" style="width:30px;height:30px;object-fit:contain" onerror="this.style.opacity=.2">`}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;color:var(--text1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${displayName}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:1px">×${it.quantity}${isPending ? (isReady ? ' · <span style="color:var(--success)">✓</span>' : ' · <span style="color:var(--danger)">缺货</span>') : ''}</div>
+          </div>
+          <div style="flex-shrink:0;display:flex;gap:2px;align-items:center">
+            <input type="number" class="ghost-input oi-price" data-id="${it.id}" data-qty="${it.quantity}" data-field="cost"
+              value="${it.cost_price||0}" min="0" step="0.1" style="width:52px;font-size:12px;text-align:right" onfocus="this.select()" oninput="recalcOrderTotals()" onblur="autoSaveItemPrice(this,${id})">
+            <span style="color:var(--text3);font-size:10px">/</span>
+            <input type="number" class="ghost-input oi-price" data-id="${it.id}" data-qty="${it.quantity}" data-field="sell"
+              value="${it.sell_price||0}" min="0" step="0.1" style="width:52px;font-size:12px;text-align:right" onfocus="this.select()" oninput="recalcOrderTotals()" onblur="autoSaveItemPrice(this,${id})">
+          </div>
+        </div>`;
+      }).join('')}
     </div>`;
-  openModal('orderDetailModal');
 }
 
 function recalcOrderTotals() {

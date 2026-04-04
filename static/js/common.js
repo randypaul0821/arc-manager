@@ -132,6 +132,7 @@ function showPage(name) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + name)?.classList.add('active');
   document.querySelector(`[data-page="${name}"]`)?.classList.add('active');
+  // 子菜单展开：active 的 nav-item 后面的 .nav-sub 会通过 CSS 自动显示
   if (name === 'dashboard') loadDashboard();
   if (name === 'inventory') loadInventory();
   if (name === 'bundle_monitor') loadBundleMonitor();
@@ -149,7 +150,7 @@ function showPage(name) {
 //  侧栏拖拽缩放
 // ═══════════════════════════════════════
 (function() {
-  const MIN = 160, MAX = 360;
+  const MIN = 120, MAX = 320;
   const handle = document.getElementById('sidebarResize');
   const sb     = document.getElementById('sidebar');
   let dragging = false, startX = 0, startW = 0;

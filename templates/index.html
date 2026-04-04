@@ -6,7 +6,7 @@
 <title>Arc Manager Pro</title>
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/style.css">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 </head>
@@ -17,99 +17,55 @@
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-resize" id="sidebarResize"></div>
   <div class="logo">
-    <div class="logo-icon">
-      <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <polygon points="32,4 56,18 56,46 32,60 8,46 8,18" stroke="url(#logoGrad)" stroke-width="3" stroke-linejoin="round" fill="none"/>
-        <polygon points="32,12 48,22 48,42 32,52 16,42 16,22" stroke="url(#logoGrad)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(104,114,229,0.08)"/>
-        <text x="32" y="42" text-anchor="middle" font-family="Rajdhani,sans-serif" font-weight="700" font-size="26" fill="url(#logoGrad)">A</text>
-        <defs>
-          <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#6872e5"/>
-            <stop offset="50%" stop-color="#38bdf8"/>
-            <stop offset="100%" stop-color="#e879f9"/>
-          </linearGradient>
-        </defs>
-      </svg>
-    </div>
+    <div class="logo-icon" style="background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;width:28px;height:28px;box-shadow:0 0 20px rgba(134,120,255,.25)">A</div>
     <div class="logo-texts" style="flex:1">
-      <div class="logo-title">ARC</div>
-      <div class="logo-sub">MANAGER PRO</div>
+      <div class="logo-title">Arc Manager Pro</div>
     </div>
   </div>
   <nav>
-    <div class="nav-item active" data-page="dashboard" data-tip="总览" onclick="showPage('dashboard')">
-      <span class="nav-icon">
-        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-          <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
-        </svg>
-      </span>
+    <div class="nav-group-label">Overview</div>
+    <div class="nav-item active" data-page="dashboard" onclick="showPage('dashboard')">
+      <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
       <span class="nav-label">总览</span>
     </div>
-    <div class="nav-item" data-page="inventory" data-tip="库存" onclick="showPage('inventory')">
-      <span class="nav-icon">
-        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M2 7l10-4 10 4v10l-10 4L2 17V7z"/><polyline points="12 3 12 21"/><polyline points="2 7 12 11 22 7"/>
-        </svg>
-      </span>
+
+    <div class="nav-group-label">Workspace</div>
+    <div class="nav-item" data-page="inventory" onclick="showPage('inventory')">
+      <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7l10-4 10 4v10l-10 4L2 17V7z"/><path d="M12 3v18"/><path d="M2 7l10 4 10-4"/></svg></span>
       <span class="nav-label">库存</span>
-      <span class="nav-badge" id="alertBadge" style="display:none">!</span>
+      <span class="nav-count" id="alertBadge" style="display:none">!</span>
     </div>
-    <div class="nav-item" data-page="bundle_monitor" data-tip="重点关注" onclick="showPage('bundle_monitor')">
-      <span class="nav-icon">
-        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 5H2v7l6.29 6.29c.94.94 2.48.94 3.42 0l3.58-3.58c.94-.94.94-2.48 0-3.42L9 5Z"/>
-          <path d="M6 9.01V9"/><path d="m15 5 6.3 6.3a2.4 2.4 0 0 1 0 3.4L17 19"/>
-        </svg>
-      </span>
+    <div class="nav-item" data-page="bundle_monitor" onclick="showPage('bundle_monitor')">
+      <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5H2v7l6.29 6.29c.94.94 2.48.94 3.42 0l3.58-3.58c.94-.94.94-2.48 0-3.42L9 5Z"/><circle cx="6" cy="9" r=".5" fill="currentColor"/></svg></span>
       <span class="nav-label">重点关注</span>
     </div>
-    <div class="nav-item" data-page="orders" data-tip="订单" onclick="showPage('orders')">
-      <span class="nav-icon">
-        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
-          <rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/>
-        </svg>
-      </span>
+    <div class="nav-item" data-page="orders" onclick="showPage('orders')">
+      <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg></span>
       <span class="nav-label">订单</span>
+      <span class="nav-count" id="orderNavCount"></span>
     </div>
-    <div class="nav-item" data-page="bundles" data-tip="套餐库" onclick="showPage('bundles')">
-      <span class="nav-icon">
-        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5" rx="1"/>
-          <line x1="12" y1="22" x2="12" y2="7"/>
-          <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/>
-          <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
-        </svg>
-      </span>
+    <div class="nav-sub" id="orderSubNav">
+      <div class="nav-sub-item new" onclick="openNewOrder()">+ 新建订单</div>
+      <div class="nav-sub-item active" data-tab="pending" onclick="setOrderTab('pending',this)">待处理 <span class="count" id="orderPendingCount"></span></div>
+      <div class="nav-sub-item" data-tab="completed" onclick="setOrderTab('completed',this)">已完成</div>
+      <div class="nav-sub-item" data-tab="archived" onclick="setOrderTab('archived',this)">已归档</div>
+    </div>
+    <div class="nav-item" data-page="bundles" onclick="showPage('bundles')">
+      <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="5" rx="1"/><path d="M4 12v10h16V12"/><path d="M12 7v15"/></svg></span>
       <span class="nav-label">套餐库</span>
     </div>
-    <div class="nav-item" data-page="items" data-tip="物品库" onclick="showPage('items')">
-      <span class="nav-icon">
-        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-        </svg>
-      </span>
+    <div class="nav-item" data-page="items" onclick="showPage('items')">
+      <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
       <span class="nav-label">物品库</span>
     </div>
-    <div class="nav-item" data-page="customers" data-tip="客户" onclick="showPage('customers')">
-      <span class="nav-icon">
-        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-          <path d="m11 17 2 2a1 1 0 1 0 3-3"/>
-          <path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/>
-          <path d="m21 3 1 11h-2"/>
-          <path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/>
-          <path d="M3 4h8"/>
-        </svg>
-      </span>
+    <div class="nav-item" data-page="customers" onclick="showPage('customers')">
+      <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span>
       <span class="nav-label">客户</span>
     </div>
-    <div class="nav-item" data-page="accounts" data-tip="账号" onclick="showPage('accounts')">
-      <span class="nav-icon">
-        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
-        </svg>
-      </span>
+
+    <div class="nav-group-label">System</div>
+    <div class="nav-item" data-page="accounts" onclick="showPage('accounts')">
+      <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
       <span class="nav-label">账号</span>
     </div>
   </nav>
@@ -274,48 +230,27 @@
 </div>
 
 <!-- ── 订单 ── -->
-<div id="page-orders" class="page">
-  <div class="topbar">
-    <div class="tag-bar" style="flex:1">
-      <button class="tag-btn active" id="otab_pending"   onclick="setOrderTab('pending',this)">⏳ 待处理</button>
-      <button class="tag-btn"        id="otab_completed" onclick="setOrderTab('completed',this)">✓ 已完成</button>
-      <button class="tag-btn"        id="otab_cancelled" onclick="setOrderTab('archived',this)">📁 已归档</button>
-      <span id="completedFilters" style="display:none;margin-left:12px;display:none;gap:4px;align-items:center">
-        <span style="width:1px;height:16px;background:var(--border);margin:0 4px"></span>
+<div id="page-orders" class="page" style="flex-direction:row">
+  <!-- 左：订单列表 -->
+  <div class="order-list-pane">
+    <div id="orderToolbar" class="topbar" style="display:none">
+      <span id="completedFilters" style="display:flex;gap:4px;align-items:center">
         <button class="tag-btn active" onclick="setCompletedDays(0,this)">全部</button>
         <button class="tag-btn" onclick="setCompletedDays(1,this)">今天</button>
         <button class="tag-btn" onclick="setCompletedDays(3,this)">3天</button>
         <button class="tag-btn" onclick="setCompletedDays(7,this)">7天</button>
         <button class="tag-btn" onclick="setCompletedDays(30,this)">30天</button>
         <span style="width:1px;height:16px;background:var(--border);margin:0 4px"></span>
-        <input type="date" id="orderDateFrom" style="width:120px;padding:4px 6px;font-size:11px" onchange="setCompletedRange()">
+        <input type="date" id="orderDateFrom" style="width:100px;padding:4px 6px;font-size:11px" onchange="setCompletedRange()">
         <span style="color:var(--text3);font-size:11px">—</span>
-        <input type="date" id="orderDateTo" style="width:120px;padding:4px 6px;font-size:11px" onchange="setCompletedRange()">
+        <input type="date" id="orderDateTo" style="width:100px;padding:4px 6px;font-size:11px" onchange="setCompletedRange()">
       </span>
+      <div style="flex:1"></div>
+      <button class="btn small" id="exportDailyBtn" style="display:none;border-color:var(--accent);color:var(--accent)" onclick="exportDailyReport()">导出日报</button>
     </div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <button class="btn small" id="exportDailyBtn" style="display:none;border-color:var(--accent);color:var(--accent)" onclick="exportDailyReport()">📄 导出日报</button>
-      <button class="btn primary" onclick="openNewOrder()">+ 新建订单</button>
-    </div>
-  </div>
-  <div class="content">
-    <div class="card" style="margin-bottom:20px">
-      <table>
-        <thead><tr>
-          <th style="width:36px"><input type="checkbox" id="orderCheckAll" onchange="toggleAllOrders(this.checked)" title="全选/取消全选" style="width:auto"></th>
-          <th style="width:80px;white-space:nowrap"># <label style="font-weight:400;font-size:11px;color:var(--text3);margin-left:6px;cursor:pointer"><input type="checkbox" id="orderMultiSelect" onchange="toggleOrderMultiSelect(this.checked)" style="width:auto;vertical-align:middle;cursor:pointer"> 多选</label></th>
-          <th>客户 / 物品</th>
-          <th style="width:50px" class="col-num">数量</th>
-          <th style="width:80px" class="col-num">成本</th>
-          <th style="width:80px" class="col-num">售价</th>
-          <th style="width:80px" class="col-num">利润</th>
-          <th style="width:130px">时间</th>
-          <th style="width:160px"></th>
-        </tr></thead>
-        <tbody id="ordersBody"></tbody>
-      </table>
-    </div>
-    <div id="shortageSection">
+    <div class="order-list-scroll">
+      <div id="ordersListContainer"></div>
+      <div id="shortageSection">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:12px">
         <button class="tag-btn active" id="tabShortage" onclick="switchListTab('shortage')">补货清单</button>
@@ -361,6 +296,17 @@
       </table>
     </div>
     </div>
+    </div>
+  </div>
+  <!-- 右：订单详情面板 -->
+  <div class="order-detail-pane" id="orderDetailPane">
+    <div class="order-detail-empty" id="orderDetailEmpty">
+      <div style="color:var(--text3);font-size:13px;text-align:center;padding:48px 24px">
+        <div style="font-size:32px;margin-bottom:12px;opacity:.3">📋</div>
+        点击左侧订单查看详情
+      </div>
+    </div>
+    <div id="orderDetailContent" style="display:none"></div>
   </div>
 </div>
 
