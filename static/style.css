@@ -6,7 +6,7 @@
   --accent-light:rgba(134,120,255,.08); --accent-hover:rgba(134,120,255,.15);
   --danger:#f06060; --success:#2dd4a0; --warning:#f0a030;
   --danger-light:rgba(240,96,96,.08); --success-light:rgba(45,212,160,.08);
-  --text1:#f0f2f5; --text2:#8b95a5; --text3:#4a5264;
+  --text1:#f0f2f5; --text2:#a0aab8; --text3:#6b7588;
   --shadow-sm:0 1px 2px rgba(0,0,0,.3); --shadow:0 4px 24px rgba(0,0,0,.4);
 }
 body { font-family:'Inter','Noto Sans SC',-apple-system,system-ui,sans-serif; background:var(--bg0); color:var(--text1); min-height:100vh; font-size:14px; -webkit-font-smoothing:antialiased; }
@@ -90,7 +90,7 @@ nav { padding:8px 6px; flex:1; overflow-y:auto; }
 }
 /* ── Sub-navigation ── */
 .nav-sub { padding:2px 0 4px 28px; display:none; }
-.nav-item.active + .nav-sub { display:block; }
+.nav-sub.open { display:block; }
 .nav-sub-item {
   display:flex; align-items:center;
   padding:4px 10px; border-radius:6px;

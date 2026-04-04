@@ -135,13 +135,13 @@ function renderItems(list) {
             <span style="color:var(--text1);font-weight:500">${item.name_zh||item.name_zh_original||item.item_id}</span>
             <span style="opacity:0;font-size:11px;color:var(--text3)" class="edit-hint">✎</span>
           </div>
-          <div style="font-size:11px;color:var(--text3);margin-top:1px">${item.name_en||item.item_id}</div>
         </td>
+        <td style="font-size:12px;color:var(--text3)">${item.name_en||''}</td>
         <td id="aliascell_${item.item_id}">${aliasHtml}</td>
         <td><span class="rarity-${item.rarity}" style="font-size:12px">${item.rarity||'—'}</span></td>
       </tr>`;
     }).join('')
-    : '<tr><td colspan="5" class="empty">暂无数据</td></tr>';
+    : '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
 
   // Hover hints for name cells
   document.querySelectorAll('[id^="namecell_"]').forEach(cell => {

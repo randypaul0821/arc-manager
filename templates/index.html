@@ -35,9 +35,14 @@
       <span class="nav-label">库存</span>
       <span class="nav-count" id="alertBadge" style="display:none">!</span>
     </div>
+    <div class="nav-sub" id="invAccSub"></div>
     <div class="nav-item" data-page="bundle_monitor" onclick="showPage('bundle_monitor')">
       <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5H2v7l6.29 6.29c.94.94 2.48.94 3.42 0l3.58-3.58c.94-.94.94-2.48 0-3.42L9 5Z"/><circle cx="6" cy="9" r=".5" fill="currentColor"/></svg></span>
       <span class="nav-label">重点关注</span>
+    </div>
+    <div class="nav-sub" id="bmSubNav">
+      <div class="nav-sub-item" onclick="_bmRestockAdvice()">补货建议</div>
+      <div class="nav-sub-item" onclick="_bmOpenSettings()">关注设置</div>
     </div>
     <div class="nav-item" data-page="orders" onclick="showPage('orders')">
       <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg></span>
@@ -53,6 +58,9 @@
     <div class="nav-item" data-page="bundles" onclick="showPage('bundles')">
       <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="5" rx="1"/><path d="M4 12v10h16V12"/><path d="M12 7v15"/></svg></span>
       <span class="nav-label">套餐库</span>
+    </div>
+    <div class="nav-sub">
+      <div class="nav-sub-item new" onclick="openBundleEditor()">+ 新建套餐</div>
     </div>
     <div class="nav-item" data-page="items" onclick="showPage('items')">
       <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
@@ -128,11 +136,8 @@
 <!-- ── 库存 ── -->
 <div id="page-inventory" class="page" style="overflow:hidden">
 
-  <!-- 第一栏：账号选择器 -->
-  <div id="inv-row2"
-    style="display:flex;gap:7px;padding:7px 14px;border-bottom:1px solid var(--border);
-      background:var(--bg1);overflow-x:auto;flex-shrink:0;
-      scrollbar-width:none;-ms-overflow-style:none"></div>
+  <!-- 账号选择器已移至侧边栏子菜单 -->
+  <div id="inv-row2" style="display:none"></div>
 
   <!-- 第二栏：筛选条（搜索 + 分类 + 稀有度） -->
   <div id="inv-row1" style="flex-shrink:0;border-bottom:1px solid var(--border);background:var(--bg1)"></div>
@@ -144,13 +149,6 @@
 
 <!-- ── 套餐监控 ── -->
 <div id="page-bundle_monitor" class="page">
-  <div class="topbar" style="justify-content:space-between">
-    <div class="page-title">重点关注</div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <button class="btn" onclick="_bmRestockAdvice()">📊 补货建议</button>
-      <button class="btn" onclick="_bmOpenSettings()">⚙ 关注设置</button>
-    </div>
-  </div>
   <div class="content">
     <!-- 上半：套餐概览 -->
     <div class="card" style="margin-bottom:20px">
@@ -319,7 +317,6 @@
     </div>
     <div style="display:flex;gap:8px;flex-shrink:0;align-items:center">
       <span id="bundleCount" style="font-size:12px;color:var(--text3);white-space:nowrap"></span>
-      <button class="btn primary" onclick="openBundleEditor()">+ 新建套餐</button>
     </div>
   </div>
   <div class="content">
@@ -342,16 +339,14 @@
 <!-- ── 物品库 ── -->
 <div id="page-items" class="page">
   <div id="itemFilterBar" style="flex-shrink:0;border-bottom:1px solid var(--border);background:var(--bg1)"></div>
-  <div style="padding:0 24px;height:36px;border-bottom:1px solid var(--border);background:var(--bg1);display:flex;align-items:center;flex-shrink:0">
-    <span style="font-size:12px;color:var(--text3)">点击名称可直接编辑 · 点击「+」可添加别名</span>
-  </div>
   <div class="content">
     <div class="card">
       <table>
         <thead><tr>
           <th style="width:40px">#</th>
           <th style="width:48px"></th>
-          <th style="width:240px">名称</th>
+          <th style="width:200px">名称</th>
+          <th style="width:200px">英文名</th>
           <th>搜索别名</th>
           <th style="width:80px">稀有度</th>
         </tr></thead>

@@ -357,26 +357,19 @@ function invSetSearch(val) {
 // ─── 7. 第二栏：账号选择器 ───────────────────────────────────
 
 function _invRenderRow2() {
-  const el = document.getElementById('inv-row2');
-  if (!el) return;
+  // 渲染到侧边栏子菜单
+  const sidebar = document.getElementById('invAccSub');
+  if (!sidebar) return;
 
   const allSel = inv.selAccs.length === inv.accounts.length;
-  el.innerHTML = `
-    <button onclick="invToggleAllAcc()"
-      style="flex-shrink:0;padding:4px 12px;border-radius:20px;font-size:12px;
-        cursor:pointer;font-family:inherit;border:1px solid ${allSel ? 'var(--accent)' : 'var(--border2)'};
-        background:${allSel ? 'var(--accent-light)' : 'transparent'};
-        color:${allSel ? 'var(--accent)' : 'var(--text3)'}">全部</button>
+  sidebar.innerHTML = `
+    <div class="nav-sub-item${allSel ? ' active' : ''}" onclick="invToggleAllAcc()">全部</div>
     ${inv.accounts.map(a => {
       const c   = _color(a.id);
       const sel = inv.selAccs.includes(a.id);
-      return `<button onclick="invToggleAcc(${a.id})"
-        style="flex-shrink:0;white-space:nowrap;padding:4px 14px;border-radius:20px;
-          font-size:13px;cursor:pointer;transition:all .15s;font-family:inherit;
-          background:${sel ? c.bg : 'transparent'};
-          color:${sel ? c.text : 'var(--text3)'};
-          border:1px solid ${sel ? c.border : 'var(--border2)'}"
-      >${_esc(a.name)}</button>`;
+      return `<div class="nav-sub-item${sel ? ' active' : ''}" onclick="invToggleAcc(${a.id})"
+        style="${sel ? 'color:'+c.text : ''}"
+      >${_esc(a.name)}</div>`;
     }).join('')}
   `;
 }

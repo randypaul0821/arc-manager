@@ -128,11 +128,25 @@ function highlightMatch(rawName, matchedEn) {
 //  页面切换
 // ═══════════════════════════════════════
 function showPage(name) {
+  const navItem = document.querySelector(`[data-page="${name}"]`);
+  const isAlreadyActive = navItem && navItem.classList.contains('active');
+  const subNav = navItem && navItem.nextElementSibling;
+  const hasSub = subNav && subNav.classList.contains('nav-sub');
+
+  // 如果点击的是已激活页面且有子菜单，切换子菜单展开/收起
+  if (isAlreadyActive && hasSub) {
+    subNav.classList.toggle('open');
+    return;
+  }
+
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.nav-sub').forEach(s => s.classList.remove('open'));
   document.getElementById('page-' + name)?.classList.add('active');
-  document.querySelector(`[data-page="${name}"]`)?.classList.add('active');
-  // 子菜单展开：active 的 nav-item 后面的 .nav-sub 会通过 CSS 自动显示
+  if (navItem) navItem.classList.add('active');
+  // 展开当前页面的子菜单
+  if (hasSub) subNav.classList.add('open');
+
   if (name === 'dashboard') loadDashboard();
   if (name === 'inventory') loadInventory();
   if (name === 'bundle_monitor') loadBundleMonitor();
