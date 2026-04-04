@@ -41,8 +41,8 @@
       <span class="nav-label">重点关注</span>
     </div>
     <div class="nav-sub" id="bmSubNav">
-      <div class="nav-sub-item" onclick="_bmRestockAdvice()">补货建议</div>
-      <div class="nav-sub-item" onclick="_bmOpenSettings()">关注设置</div>
+      <div class="nav-sub-item" data-bmview="restock" onclick="_bmSwitchView('restock',this)">补货建议</div>
+      <div class="nav-sub-item" data-bmview="settings" onclick="_bmSwitchView('settings',this)">关注设置</div>
     </div>
     <div class="nav-item" data-page="orders" onclick="showPage('orders')">
       <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg></span>
@@ -149,9 +149,9 @@
 
 <!-- ── 套餐监控 ── -->
 <div id="page-bundle_monitor" class="page">
-  <div class="content">
-    <!-- 上半：套餐概览 -->
-    <div class="card" style="margin-bottom:20px">
+  <!-- 视图1: 概览（默认） -->
+  <div id="bm-view-overview" class="bm-view" style="display:flex;flex-direction:column;height:100%;overflow-y:auto">
+    <div class="card">
       <table>
         <thead><tr>
           <th style="width:36px"><input type="checkbox" id="bmOverviewCheckAll" onchange="_bmToggleOverviewAll(this.checked)" title="全选/取消全选" style="width:auto"></th>
@@ -163,8 +163,7 @@
         <tbody id="bmOverviewBody"></tbody>
       </table>
     </div>
-    <!-- 下半：补货清单 + 存货分布 -->
-    <div id="bmShortageSection">
+    <div id="bmShortageSection" style="padding:12px 0">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div style="display:flex;align-items:center;gap:12px">
           <button class="tag-btn active" id="bmTabShortage" onclick="_bmSwitchListTab('shortage')">补货清单</button>
@@ -172,11 +171,9 @@
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <button class="tag-btn" id="bmShortageToggle" onclick="_bmToggleShortageView(this)" style="font-size:11px">隐藏可调货</button>
-          <button class="btn small" onclick="_bmExportShortage()" style="border-color:var(--danger);color:var(--danger)">📋 导出缺货</button>
+          <button class="btn small" onclick="_bmExportShortage()" style="border-color:var(--danger);color:var(--danger)">导出缺货</button>
         </div>
       </div>
-      <!-- 账号筛选已移至概览表格 checkbox -->
-      <!-- 补货清单 -->
       <div class="card" id="bmShortageCard">
         <table>
           <thead><tr>
@@ -190,7 +187,6 @@
           <tbody id="bmShortageBody"></tbody>
         </table>
       </div>
-      <!-- 存货分布 -->
       <div class="card" id="bmInstockCard" style="display:none">
         <table>
           <thead><tr>
@@ -206,26 +202,28 @@
       </div>
     </div>
   </div>
-</div>
-
-<!-- 套餐关注设置弹窗 -->
-<div id="bmSettingsModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal('bmSettingsModal')">
-  <div class="modal bm-settings-modal">
-    <div class="bm-settings-header">
-      <h3 style="margin:0">关注设置</h3>
-      <button class="btn" onclick="closeModal('bmSettingsModal');loadBundleMonitor()">完成</button>
+  <!-- 视图2: 补货建议 -->
+  <div id="bm-view-restock" class="bm-view" style="display:none;flex-direction:column;height:100%">
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <span style="font-size:13px;font-weight:600;color:var(--text1)">补货建议</span>
+      <span style="flex:1"></span>
+      <span style="font-size:11px;color:var(--text3);margin-right:4px">补货天数：</span>
+      <button class="tag-btn" onclick="_bmSetRestockDays(1,this)">1天</button>
+      <button class="tag-btn" onclick="_bmSetRestockDays(3,this)">3天</button>
+      <button class="tag-btn active" onclick="_bmSetRestockDays(7,this)">7天</button>
+      <button class="tag-btn" onclick="_bmSetRestockDays(14,this)">14天</button>
+      <span style="width:1px;height:16px;background:var(--border);margin:0 4px"></span>
+      <button class="btn small" onclick="_bmCopyRestock()">复制</button>
     </div>
+    <div id="bmRestockContent" style="flex:1;overflow-y:auto;padding:16px"></div>
+  </div>
+  <!-- 视图3: 关注设置 -->
+  <div id="bm-view-settings" class="bm-view" style="display:none;flex-direction:column;height:100%">
     <div id="bmSettingsContent" style="flex:1;overflow:hidden;display:flex;flex-direction:column"></div>
   </div>
 </div>
 
-<!-- 导出弹窗 -->
-<div id="bmExportModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal('bmExportModal')">
-  <div class="modal" style="max-width:500px">
-    <h2 id="bmExportTitle">导出</h2>
-    <div id="bmExportBody"></div>
-  </div>
-</div>
+
 
 <!-- ── 订单 ── -->
 <div id="page-orders" class="page">

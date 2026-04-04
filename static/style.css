@@ -499,16 +499,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 .toggle-switch.on .toggle-knob { left: 18px; }
 
-/* ── 关注设置弹窗 ── */
-.bm-settings-modal {
-  width: 900px; max-width: 95vw; height: 85vh; padding: 0;
-  display: flex; flex-direction: column; overflow: hidden;
-}
-.bm-settings-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0;
-}
-.bm-settings-header h3 { font-family: 'Rajdhani', sans-serif; font-size: 18px; font-weight: 700; }
+/* ── 关注设置（全页视图） ── */
+.bm-view { flex-direction: column; height: 100%; }
 .bm-acc-bar {
   display: flex; gap: 6px; padding: 12px 20px; border-bottom: 1px solid var(--border);
   flex-shrink: 0; flex-wrap: wrap; align-items: center; background: var(--bg2);

@@ -149,7 +149,7 @@ function showPage(name) {
 
   if (name === 'dashboard') loadDashboard();
   if (name === 'inventory') loadInventory();
-  if (name === 'bundle_monitor') loadBundleMonitor();
+  if (name === 'bundle_monitor') { _bmSwitchView('overview'); loadBundleMonitor(); }
   if (name === 'orders')    {
     if (!state.orders.activeTab) state.orders.activeTab = 'pending';
     loadOrders().then(() => loadShortage());

@@ -444,39 +444,50 @@ function _bmExportShortage() {
   openModal('bmExportModal');
 }
 
+// ═══ 视图切换 ═══
+
+function _bmSwitchView(view, btn) {
+  // 隐藏所有视图
+  document.querySelectorAll('#page-bundle_monitor .bm-view').forEach(v => v.style.display = 'none');
+  // 显示目标视图
+  const target = document.getElementById('bm-view-' + view);
+  if (target) target.style.display = 'flex';
+  // 更新侧边栏子菜单 active 状态
+  document.querySelectorAll('#bmSubNav .nav-sub-item').forEach(s => s.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  // 加载视图数据
+  if (view === 'restock') _bmLoadRestock();
+  if (view === 'settings') _bmOpenSettings();
+}
+
 // ═══ 补货建议 ═══
 
-let _bmRestockDays = 1;
+let _bmRestockDays = 7;
 
-async function _bmRestockAdvice() {
-  document.getElementById('bmExportTitle').textContent = '补货建议';
+function _bmSetRestockDays(days, btn) {
+  _bmRestockDays = days;
+  const bar = btn.parentElement;
+  bar.querySelectorAll('.tag-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  _bmLoadRestock();
+}
 
-  // 参数选择 + 加载状态
-  document.getElementById('bmExportBody').innerHTML = `
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">
-      <span style="font-size:12px;color:var(--text3)">补货天数</span>
-      ${[1,3,7,14].map(d =>
-        `<button class="tag-btn${_bmRestockDays===d?' active':''}" onclick="_bmRestockDays=${d};_bmRestockAdvice()" style="font-size:12px">${d}天</button>`
-      ).join('')}
-    </div>
-    <div style="text-align:center;padding:20px;color:var(--text3)">分析中...</div>`;
-  openModal('bmExportModal');
+function _bmCopyRestock() {
+  const el = document.getElementById('bmRestockText');
+  if (el) navigator.clipboard.writeText(el.value).then(() => toast('已复制', 'success'));
+}
+
+async function _bmLoadRestock() {
+  const el = document.getElementById('bmRestockContent');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">分析中...</div>';
 
   const data = await api(`/api/restock-advice?days=14&restock_days=${_bmRestockDays}`);
   if (!data || !data.length) {
-    document.getElementById('bmExportBody').innerHTML = `
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">
-        <span style="font-size:12px;color:var(--text3)">补货天数</span>
-        ${[1,3,7,14].map(d =>
-          `<button class="tag-btn${_bmRestockDays===d?' active':''}" onclick="_bmRestockDays=${d};_bmRestockAdvice()" style="font-size:12px">${d}天</button>`
-        ).join('')}
-      </div>
-      <div style="text-align:center;padding:20px;color:var(--text3)">当前库存充足，无需补货</div>
-      <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" onclick="closeModal('bmExportModal')">关闭</button></div>`;
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">当前库存充足，无需补货</div>';
     return;
   }
 
-  // 生成文本
   const urgent = data.filter(i => i.level === 'urgent');
   const warning = data.filter(i => i.level === 'warning');
   let text = '';
@@ -484,11 +495,7 @@ async function _bmRestockAdvice() {
     text += '🔴 急补\n';
     for (const i of urgent) {
       text += `${i.name_zh} 日均${i.daily_avg} 库存${i.current_stock} 撑${i.days_left}天\n`;
-      if (i.transfer) {
-        text += `  补${i.restock_qty} ← ${i.transfer}\n`;
-      } else {
-        text += `  补${i.restock_qty}\n`;
-      }
+      text += i.transfer ? `  补${i.restock_qty} ← ${i.transfer}\n` : `  补${i.restock_qty}\n`;
     }
     text += '\n';
   }
@@ -496,34 +503,17 @@ async function _bmRestockAdvice() {
     text += '🟡 预补\n';
     for (const i of warning) {
       text += `${i.name_zh} 日均${i.daily_avg} 库存${i.current_stock} 撑${i.days_left}天\n`;
-      if (i.transfer) {
-        text += `  补${i.restock_qty} ← ${i.transfer}\n`;
-      } else {
-        text += `  补${i.restock_qty}\n`;
-      }
+      text += i.transfer ? `  补${i.restock_qty} ← ${i.transfer}\n` : `  补${i.restock_qty}\n`;
     }
   }
   text = text.trimEnd();
-  const lines = text.split('\n').length;
 
-  document.getElementById('bmExportBody').innerHTML = `
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">
-      <span style="font-size:12px;color:var(--text3)">补货天数</span>
-      ${[1,3,7,14].map(d =>
-        `<button class="tag-btn${_bmRestockDays===d?' active':''}" onclick="_bmRestockDays=${d};_bmRestockAdvice()" style="font-size:12px">${d}天</button>`
-      ).join('')}
-    </div>
-    <textarea id="bmExportText" readonly style="width:100%;height:${Math.min(lines+1,25)*22+20}px;font-size:13px;line-height:1.8;background:var(--bg2);color:var(--text1);border:1px solid var(--border);border-radius:6px;padding:10px;font-family:inherit;resize:vertical">${text}</textarea>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
-      <button class="btn" onclick="navigator.clipboard.writeText(document.getElementById('bmExportText').value).then(()=>toast('已复制','success'))">📋 复制</button>
-      <button class="btn" onclick="closeModal('bmExportModal')">关闭</button>
-    </div>`;
+  el.innerHTML = `<textarea id="bmRestockText" readonly style="width:100%;flex:1;font-size:13px;line-height:1.8;background:var(--bg2);color:var(--text1);border:1px solid var(--border);border-radius:6px;padding:12px;font-family:inherit;resize:none">${text}</textarea>`;
 }
 
-// ═══ 关注设置弹窗 ═══
+// ═══ 关注设置（全页） ═══
 
 async function _bmOpenSettings() {
-  openModal('bmSettingsModal');
   // 每次打开设置都重新拉取最新套餐和库存数据，保持与套餐库同步
   const [bundles, inventory] = await Promise.all([
     api('/api/bundles'), api('/api/inventory'),
