@@ -13,8 +13,7 @@
   <a href="#quick-start">快速开始</a> &nbsp;&bull;&nbsp;
   <a href="#architecture">架构设计</a> &nbsp;&bull;&nbsp;
   <a href="#api">API 文档</a> &nbsp;&bull;&nbsp;
-  <a href="#chrome-extension">Chrome 扩展</a> &nbsp;&bull;&nbsp;
-  <a href="#contributing">参与贡献</a>
+  <a href="#chrome-extension">Chrome 扩展</a>
 </p>
 
 <p align="center">
@@ -197,7 +196,7 @@ arc-manager-pro/
 │
 ├── static/
 │   ├── style.css               # 全局样式
-│   └── js/                     # 前端模块（~5,100 行）
+│   └── js/                     # 前端模块
 │       ├── common.js           #   公共 API 封装 & 工具函数
 │       ├── dashboard.js        #   总览页
 │       ├── inventory.js        #   库存页
@@ -223,7 +222,8 @@ arc-manager-pro/
 │   ├── manifest.json
 │   ├── background.js
 │   ├── presence.js
-│   └── rules.json
+│   ├── rules.json
+│   └── icon*.png               #   扩展图标（16/48/128）
 │
 ├── install.bat                 # 一键安装脚本
 ├── start.bat                   # 启动脚本
