@@ -59,9 +59,17 @@ Arc Manager Pro 是一个为 [Arc Raiders](https://arcraiders.com/) 游戏玩家
 - **文本解析引擎**：粘贴客户聊天记录，自动提取「物品名 x 数量」
 - **模糊匹配算法**：基于 Bigram 分析 + 最长公共子串，容错率高
 - **AI 辅助匹配**：低置信度物品可调用 Claude API 二次匹配
-- 订单全生命周期管理（草稿 → 进行中 → 已完成 / 已取消）
-- 智能分账建议：根据各账号库存自动推荐最优扣货方案
-- 缺货清单 & 每日报表
+- 订单全生命周期管理（待处理 → 已完成 → 已归档）
+- **物品需求表**：自动汇总选中订单的物品需求，显示各账号库存与可合成数量
+- **拿货联动**：在需求表中点击账号分配拿货来源，订单行物品标签实时更新状态（未分配 / 已备齐 / 缺货+缺口数）
+- 选中的拿货标签显示彩色流转渐变边框动画
+- 缺货导出 & 每日报表
+
+### Crafting / 合成计算器
+
+- 基于游戏藏身处配方的多级合成树解析
+- 自动计算各账号可合成数量（递归分析子材料库存）
+- 合成数据与物品需求表联动，显示「库存 + 可合成」综合供给
 
 ### Bundles / 套餐管理
 
@@ -165,6 +173,7 @@ arc-manager-pro/
 ├── routes/                     # HTTP 路由层（Flask 蓝图）
 │   ├── accounts.py             #   账号 CRUD & 同步触发
 │   ├── bundles.py              #   套餐管理
+│   ├── craft.py                #   合成计算器
 │   ├── customers.py            #   客户管理
 │   ├── inventory.py            #   库存查询
 │   ├── items.py                #   物品 & 别名
@@ -172,12 +181,13 @@ arc-manager-pro/
 │   ├── settings.py             #   系统设置
 │   └── watchlist.py            #   监控规则
 │
-├── services/                   # 业务逻辑层（核心代码 ~4,600 行）
+├── services/                   # 业务逻辑层
 │   ├── sync_service.py         #   后台同步调度器
 │   ├── match_service.py        #   模糊匹配引擎
-│   ├── order_service.py        #   订单全流程（最大模块 ~900 行）
+│   ├── order_service.py        #   订单全流程
 │   ├── item_service.py         #   物品数据加载（线程安全缓存）
 │   ├── bundle_service.py       #   套餐操作 & 成本计算
+│   ├── craft_service.py        #   合成树解析 & 可合成量计算
 │   ├── inventory_service.py    #   库存聚合
 │   ├── customer_service.py     #   客户追踪
 │   ├── watchlist_service.py    #   告警规则 & 检查
@@ -199,7 +209,7 @@ arc-manager-pro/
 │       ├── customers.js        #   客户页
 │       ├── accounts.js         #   账号页
 │       ├── watchlist.js        #   监控设置
-│       └── shortage.js         #   缺货报表
+│       └── shortage.js         #   物品需求 & 拿货分配
 │
 ├── templates/
 │   └── index.html              # SPA 入口（单页应用外壳）
@@ -327,6 +337,15 @@ arc-manager-pro/
 | `POST` | `/api/orders/parse` | 文本解析 → 物品匹配 |
 | `GET` | `/api/orders/shortage` | 缺货清单 |
 | `GET` | `/api/orders/stats` | 统计数据 |
+
+</details>
+
+<details>
+<summary><strong>Crafting / 合成</strong></summary>
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/craft/craftable?item_id=` | 计算各账号可合成数量 |
 
 </details>
 
