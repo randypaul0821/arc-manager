@@ -94,18 +94,34 @@ def load_overrides() -> dict:
 
 
 def load_aliases_map() -> dict:
-    """返回 {item_id: [{id, alias}, ...]}"""
+    """返回 {item_id: [{id, alias}, ...]}，自动过滤与显示名重复的别名"""
     try:
         with get_conn() as conn:
             rows = conn.execute(
                 "SELECT id, item_id, alias FROM item_aliases ORDER BY id"
             ).fetchall()
             logger.debug(f"加载 {len(rows)} 条 item_aliases")
+
+        # 获取显示名，用于过滤重复
+        display = load_display_names()
+        items = load_item_data()
+
         result: dict = {}
+        skipped = 0
         for r in rows:
-            if r["item_id"] not in result:
-                result[r["item_id"]] = []
-            result[r["item_id"]].append({"id": r["id"], "alias": r["alias"]})
+            alias = r["alias"].strip()
+            iid = r["item_id"]
+            # 跳过与显示名或原始名完全相同的别名
+            disp_name = display.get(iid, "")
+            orig_name = items.get(iid, {}).get("name_zh", "")
+            if alias == disp_name or alias == orig_name:
+                skipped += 1
+                continue
+            if iid not in result:
+                result[iid] = []
+            result[iid].append({"id": r["id"], "alias": alias})
+        if skipped:
+            logger.info(f"过滤了 {skipped} 条与显示名重复的别名")
         return result
     except Exception as e:
         logger.error("加载 item_aliases 失败", exc_info=True)

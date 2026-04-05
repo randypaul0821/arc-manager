@@ -275,6 +275,19 @@ def _migrate(c):
     except sqlite3.OperationalError:
         logger.debug("  列 accounts.sync_paused 已存在，跳过")
 
+    # 10 — 清理与显示名重复的别名（历史迁移遗留）
+    try:
+        deleted = c.execute("""
+            DELETE FROM item_aliases WHERE id IN (
+                SELECT a.id FROM item_aliases a
+                JOIN item_overrides o ON a.item_id = o.item_id AND a.alias = o.name_zh
+            )
+        """).rowcount
+        if deleted:
+            logger.info(f"  清理了 {deleted} 条与显示名重复的别名")
+    except Exception as e:
+        logger.debug(f"迁移步骤10: {e}")
+
     # 10 — arctracker 登录凭据（自动登录用）
     for col, typedef in [("arc_email", "TEXT DEFAULT ''"), ("arc_password", "TEXT DEFAULT ''")]:
         try:
