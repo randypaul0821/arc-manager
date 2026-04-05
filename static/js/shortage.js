@@ -14,6 +14,12 @@ const _shortagePickSources = {};
 // ── 数据加载 ──
 
 async function loadShortage() {
+  // 确保账号颜色映射已初始化（用户可能未先访问库存页）
+  if (!inv.colorIdx || !Object.keys(inv.colorIdx).length) {
+    const accounts = await api('/api/accounts').catch(() => []);
+    (accounts || []).filter(a => a.active).forEach((a, i) => { inv.colorIdx[a.id] = i; });
+  }
+
   const raw = await api('/api/orders/shortage');
   _shortageData = raw || [];
 
@@ -85,6 +91,9 @@ function togglePickSource(itemId, accountId) {
 
   // 联动高亮订单
   _highlightOrdersForItem(itemId);
+
+  // 联动更新订单行物品标签
+  renderOrdersFromCache();
 }
 
 function _updateRowStatus(itemId) {
@@ -227,7 +236,7 @@ function renderShortage() {
 
       return `<span class="shortage-acc-tag${isPicked ? ' picked' : ''}" id="stag_${item.item_id}_${a.account_id}"
         onclick="togglePickSource('${item.item_id}',${a.account_id})"
-        style="border-color:${c.border};${isPicked ? `background:${c.bg}` : ''}">
+        style="border-color:${c.border};color:${c.text};${isPicked ? `background:${c.bg}` : ''}">
         <span style="color:${c.text};font-weight:500">${a.account_name}</span>
         <span style="font-weight:700;color:var(--text1)">×${a.quantity}</span>
         ${craftQty > 0 ? `<span style="color:var(--accent);font-weight:700">+${craftQty}</span>` : ''}

@@ -700,12 +700,28 @@ tr.item-highlight td { background: rgba(45,212,160,.04) !important; }
   background: var(--bg3); border: 1.5px solid var(--border);
 }
 .shortage-acc-tag:hover { filter: brightness(1.2); }
-.shortage-acc-tag.picked {
-  animation: shortage-breathe 2s ease-in-out infinite;
+.shortage-acc-tag { position: relative; }
+.shortage-acc-tag::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: conic-gradient(from var(--glow-angle), #6872e5, #38bdf8, #a78bfa, #e879f9, #f472b6, #38bdf8, #6872e5);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 2px;
+  opacity: 0;
+  transition: opacity .3s;
+  pointer-events: none;
+  z-index: 1;
 }
-@keyframes shortage-breathe {
-  0%,100% { filter: brightness(1); }
-  50% { filter: brightness(1.3); }
+.shortage-acc-tag.picked {
+  border-color: transparent !important;
+}
+.shortage-acc-tag.picked::after {
+  opacity: 1;
+  animation: glow-rotate 2.5s linear infinite;
 }
 
 /* ── 缺货面板 ── */

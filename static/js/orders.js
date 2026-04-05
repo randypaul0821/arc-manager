@@ -135,17 +135,47 @@ function renderOrdersFromCache() {
         }
         return it.shortage || 0;
       };
-      // 每个物品只算一次
-      const itemShortages = items.map(it => ({ ...it, _shortage: calcShortage(it) }));
-      const shortItems = itemShortages.filter(it => it._shortage > 0 && !_shortageGathered.has(it.item_id))
+      // 每个物品只算一次，附加分配状态
+      const itemShortages = items.map(it => {
+        if (!isSelected) {
+          // 未选中订单：永远中性灰标签，不参与拿货逻辑
+          return { ...it, _shortage: 0, _tagState: 'unassigned' };
+        }
+        // 选中订单：三态（未分配/已备齐/缺货）
+        const gathered = _shortageGathered.has(it.item_id);
+        const p = _shortagePickSources[it.item_id];
+        const picked = p && p.size > 0;
+        const shortage = calcShortage(it);
+        let tagState = 'unassigned';
+        if (gathered) tagState = 'ok';
+        else if (picked) tagState = shortage > 0 ? 'short' : 'ok';
+        return { ...it, _shortage: shortage, _tagState: tagState };
+      });
+      const shortItems = itemShortages.filter(it => it._tagState === 'short')
                                       .map(it => ({ ...it, shortage: it._shortage }));
-      const okItems    = itemShortages.filter(it => it._shortage === 0 || _shortageGathered.has(it.item_id));
+      const okItems    = itemShortages.filter(it => it._tagState === 'ok');
+      const neutralItems = itemShortages.filter(it => it._tagState === 'unassigned');
 
-      const makeShortTag = it => `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 9px;border-radius:4px;font-size:12px;font-weight:600;margin:2px;background:rgba(240,68,68,.12);color:var(--danger);border:1px solid rgba(240,68,68,.25)">${it.name_zh||it.raw_name} <b>×${it.quantity}</b></span>`;
+      // 计算已分配的库存量（仅从选中账号）
+      const pickedStockFor = (itemId) => {
+        const sd = shortageMap.get(itemId);
+        if (!sd) return 0;
+        const p = _shortagePickSources[itemId];
+        if (!p || p.size === 0) return 0;
+        return (sd.account_stocks || [])
+          .filter(a => p.has(a.account_id))
+          .reduce((s, a) => s + a.quantity, 0);
+      };
+      const makeShortTag = it => {
+        const gap = it.quantity - pickedStockFor(it.item_id);
+        const gapText = gap > 0 && gap < it.quantity ? ` 缺${gap}` : '';
+        return `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 9px;border-radius:4px;font-size:12px;font-weight:600;margin:2px;background:rgba(240,68,68,.12);color:var(--danger);border:1px solid rgba(240,68,68,.25)">${it.name_zh||it.raw_name} <b>×${it.quantity}</b>${gapText}</span>`;
+      };
       const makeOkTag   = it => `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 9px;border-radius:4px;font-size:12px;margin:2px;background:rgba(52,211,153,.08);color:var(--success);border:1px solid rgba(52,211,153,.2)">${it.name_zh||it.raw_name} ×${it.quantity}</span>`;
+      const makeNeutralTag = it => `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 9px;border-radius:4px;font-size:12px;margin:2px;background:var(--bg3);color:var(--text2);border:1px solid var(--border)">${it.name_zh||it.raw_name} ×${it.quantity}</span>`;
 
       const THRESHOLD = 8;
-      const allTags   = shortItems.map(makeShortTag).concat(okItems.map(makeOkTag));
+      const allTags   = shortItems.map(makeShortTag).concat(neutralItems.map(makeNeutralTag)).concat(okItems.map(makeOkTag));
       const needFold  = allTags.length > THRESHOLD;
       const visibleHtml = allTags.slice(0, THRESHOLD).join('');
       const hiddenHtml  = needFold ? allTags.slice(THRESHOLD).join('') : '';
@@ -153,7 +183,7 @@ function renderOrdersFromCache() {
       const foldBtn  = needFold ? `<button id="obtn_${o.id}" onclick="toggleOrderItems(${o.id})" style="display:none;cursor:pointer;font-size:11px;color:var(--accent);padding:2px 7px;border:1px solid var(--accent);border-radius:4px;margin:2px;background:none;font-family:inherit">+${allTags.length - THRESHOLD} 展开</button>` : '';
       const foldArea = needFold ? `<span id="omore_${o.id}" style="display:inline">${hiddenHtml}<button onclick="toggleOrderItems(${o.id})" style="cursor:pointer;font-size:11px;color:var(--accent);padding:2px 7px;border:1px solid var(--accent);border-radius:4px;margin:2px;background:none;font-family:inherit">收起</button></span>` : '';
 
-      itemsHtml = shortItems.length === 0
+      itemsHtml = shortItems.length === 0 && neutralItems.length === 0
         ? `<span style="font-size:12px;color:var(--success)">✓ 所有物品已备齐（共${items.length}件）</span>`
         : visibleHtml + foldBtn + foldArea;
     } else {
