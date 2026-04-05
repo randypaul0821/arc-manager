@@ -173,10 +173,9 @@ function renderOrdersFromCache() {
     const chk = _selectedOrders.has(o.id);
     return `<tr id="orow_${o.id}" style="${rowBg}${isPending && !chk ? ';opacity:.5' : ''}">
       <td style="text-align:center">${isPending ? `<input type="checkbox" ${chk?'checked':''} onchange="toggleOrderSelect(${o.id},this.checked)" style="cursor:pointer;width:16px;height:16px">` : ''}</td>
-      <td style="color:var(--text3);font-size:12px;text-align:center;cursor:pointer" onclick="this.parentElement.querySelector('input[type=checkbox]')?.click()">${idx}</td>
+      <td style="color:var(--text3);font-size:12px;white-space:nowrap;cursor:pointer" onclick="this.parentElement.querySelector('input[type=checkbox]')?.click()">#${idx} ${o.customer_name ? `<span style="color:var(--text1);font-weight:600">${o.customer_name}</span>` : ''}</td>
       <td style="cursor:pointer" onclick="this.parentElement.querySelector('input[type=checkbox]')?.click()">
-        ${o.customer_name ? `<div style="font-weight:600;font-size:13px;margin-bottom:4px">${o.customer_name}</div>` : ''}
-        <div style="display:flex;flex-wrap:wrap;align-items:center">${itemsHtml}</div>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:2px">${itemsHtml}</div>
       </td>
       <td class="col-num" style="color:var(--text2)">${items.length||'—'}</td>
       <td class="col-num">${cc(fmtPrice(cost), cost ? costColor : 'var(--text3)')}</td>

@@ -66,6 +66,20 @@ function togglePickSource(itemId, accountId) {
   if (s.has(accountId)) s.delete(accountId);
   else s.add(accountId);
 
+  // 即时更新标签样式
+  const tag = document.getElementById(`stag_${itemId}_${accountId}`);
+  if (tag) {
+    const ci = (inv.colorIdx && inv.colorIdx[accountId] !== undefined) ? inv.colorIdx[accountId] : 0;
+    const c = INV_PALETTE[ci % INV_PALETTE.length];
+    if (s.has(accountId)) {
+      tag.classList.add('picked');
+      tag.style.background = c.bg;
+    } else {
+      tag.classList.remove('picked');
+      tag.style.background = '';
+    }
+  }
+
   // 更新该行状态
   _updateRowStatus(itemId);
 
@@ -197,7 +211,7 @@ function renderShortage() {
       statusHtml = `<span style="color:var(--danger);font-weight:600">缺 ${gap}</span>`;
     }
 
-    // 各账号库存+合成标签
+    // 各账号库存+合成标签（带颜色）
     const accStocks = item.account_stocks || [];
     const craftData = _shortageCraftCache[item.item_id];
     const accHtml = accStocks.map(a => {
@@ -207,28 +221,25 @@ function renderShortage() {
         const ac = craftData.accounts.find(x => x.account_id === a.account_id);
         if (ac) craftQty = ac.craftable || 0;
       }
-      const total = a.quantity + craftQty;
-      const enough = total >= item.total_needed;
+      // 账号颜色（复用库存页调色板）
+      const ci = (inv.colorIdx && inv.colorIdx[a.account_id] !== undefined) ? inv.colorIdx[a.account_id] : 0;
+      const c = INV_PALETTE[ci % INV_PALETTE.length];
 
-      return `<span onclick="togglePickSource('${item.item_id}',${a.account_id})"
-        style="display:inline-flex;align-items:center;gap:3px;margin:1px 2px;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:12px;transition:all .12s;
-        ${isPicked
-          ? `background:${enough ? 'rgba(45,212,160,.15)' : 'var(--accent-light)'};border:1px solid ${enough ? 'rgba(45,212,160,.35)' : 'rgba(134,120,255,.3)'}`
-          : 'background:var(--bg3);border:1px solid var(--border)'
-        }">
-        <span style="color:${isPicked ? (enough ? 'var(--success)' : 'var(--accent)') : 'var(--text2)'};font-weight:500">${a.account_name}</span>
-        <span style="font-weight:600;color:${isPicked ? 'var(--text1)' : 'var(--text2)'}">×${a.quantity}</span>
-        ${craftQty > 0 ? `<span style="color:var(--accent);font-weight:600">+${craftQty}</span>` : ''}
+      return `<span class="shortage-acc-tag${isPicked ? ' picked' : ''}" id="stag_${item.item_id}_${a.account_id}"
+        onclick="togglePickSource('${item.item_id}',${a.account_id})"
+        style="border-color:${c.border};${isPicked ? `background:${c.bg}` : ''}">
+        <span style="color:${c.text};font-weight:500">${a.account_name}</span>
+        <span style="font-weight:700;color:var(--text1)">×${a.quantity}</span>
+        ${craftQty > 0 ? `<span style="color:var(--accent);font-weight:700">+${craftQty}</span>` : ''}
       </span>`;
     }).join('');
 
-    // 来源订单（客户名 + 序号）
+    // 来源订单（序号 + 客户名）
     const orderHtml = (item.orders || []).map(o => {
       const idx = _orderIdToIdx[o.order_id];
-      const label = o.customer_name
-        ? `${o.customer_name} #${idx !== undefined ? idx : o.order_id}`
-        : `#${idx !== undefined ? idx : o.order_id}`;
-      return `<span style="font-size:12px;color:var(--text2);margin-right:4px">${label}</span>`;
+      const idxStr = idx !== undefined ? idx : o.order_id;
+      const label = o.customer_name ? `#${idxStr} ${o.customer_name}` : `#${idxStr}`;
+      return `<span style="font-size:12px;color:var(--text2);margin-right:6px">${label}</span>`;
     }).join('');
 
     return `<tr style="${fulfilled ? 'opacity:.45' : ''}"
