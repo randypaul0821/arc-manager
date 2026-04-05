@@ -259,46 +259,22 @@
         <tbody id="ordersBody"></tbody>
       </table>
     </div>
-    <div id="shortageSection" style="padding:12px 0">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div style="display:flex;align-items:center;gap:12px">
-        <button class="tag-btn active" id="tabShortage" onclick="switchListTab('shortage')">补货清单</button>
-        <button class="tag-btn" id="tabInstock" onclick="switchListTab('instock')">存货分布</button>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <button class="tag-btn active" id="shortageToggle" onclick="toggleShortageView(this)" style="font-size:11px">只看缺货</button>
+    <div id="shortageSection" style="padding:0">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--border)">
+        <span style="font-size:13px;font-weight:600;color:var(--text2)">物品需求</span>
         <button class="btn small" onclick="exportShortageText()" style="border-color:var(--danger);color:var(--danger)">导出缺货</button>
       </div>
-    </div>
-    <div id="stockAccountBar" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:8px 12px;background:var(--bg1);border:1px solid var(--border);border-radius:8px">
-      <span style="font-size:11px;color:var(--text3);margin-right:4px;white-space:nowrap">选择账号：</span>
-    </div>
-    <div class="card" id="shortageCard">
       <table>
         <thead><tr>
-          <th style="width:48px"></th>
+          <th style="width:44px"></th>
           <th>物品</th>
-          <th>英文名</th>
-          <th style="width:90px" class="col-num">需要</th>
-          <th style="width:90px" class="col-num">库存</th>
-          <th style="width:80px" class="col-num">缺口</th>
-          <th>来源订单</th>
-          <th style="width:80px"></th>
+          <th style="width:60px" class="col-num">需求</th>
+          <th>各账号库存 / 可合成</th>
+          <th style="width:80px" class="col-num">状态</th>
+          <th style="width:160px">来源订单</th>
         </tr></thead>
         <tbody id="shortageBody"></tbody>
-      </table>
-    </div>
-    <div class="card" id="instockCard" style="display:none">
-      <table>
-        <thead><tr>
-          <th style="width:48px"></th>
-          <th style="width:140px">物品</th>
-          <th style="width:55px" class="col-num">需要</th>
-          <th style="width:55px" class="col-num">总库存</th>
-          <th>各账号库存</th>
-          <th style="width:140px">来源订单</th>
-        </tr></thead>
-        <tbody id="instockBody"></tbody>
       </table>
     </div>
     </div>

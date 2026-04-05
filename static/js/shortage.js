@@ -1,111 +1,17 @@
 'use strict';
 
-// ══════════ 补货清单 + 存货分布 ══════════
+// ══════════ 物品需求（合并版：补货 + 存货 + 合成） ══════════
+
 const _shortageGathered = new Set();
-let   _shortageShowAll  = false;
 const _orderIdToIdx     = {};
 let   _shortageData     = [];
-let   _instockData      = [];
 let   _bundleItemsMap   = {};
-let   _stockAccounts    = [];
-let   _selectedAccounts = new Set();
-let   _shortageMultiSelect = localStorage.getItem('shortage_multi_select') === '1';
-let   _itemAccountExcludes = {}; // { item_id: Set([account_id, ...]) } 行级排除
+let   _shortageCraftCache = {};  // { item_id: { accounts: [{account_id, craftable, stock}] } }
 
-function switchListTab(tab) {
-  document.getElementById('tabShortage').classList.toggle('active', tab === 'shortage');
-  document.getElementById('tabInstock').classList.toggle('active', tab === 'instock');
-  document.getElementById('shortageCard').style.display = tab === 'shortage' ? '' : 'none';
-  document.getElementById('instockCard').style.display  = tab === 'instock'  ? '' : 'none';
-  document.getElementById('shortageToggle').style.display = tab === 'shortage' ? '' : 'none';
-  if (tab === 'instock') loadInstock();
-}
+// 拿货选择：{ item_id: Set<account_id> } — 记录每个物品从哪些账号拿货
+const _shortagePickSources = {};
 
-// ── 账号筛选栏 ──
-
-function _buildAccountBar() {
-  const bar = document.getElementById('stockAccountBar');
-  if (!bar) return;
-  if (!_stockAccounts.length) { bar.style.display = 'none'; return; }
-  bar.style.display = 'flex';
-
-  const allActive = _selectedAccounts.size === _stockAccounts.length;
-  let html = '<span style="font-size:11px;color:var(--text3);margin-right:4px;white-space:nowrap">选择账号：</span>';
-  html += `<button class="tag-btn${allActive ? ' active' : ''}" onclick="toggleStockAccount('all')" style="font-size:11px">全部</button>`;
-  for (const a of _stockAccounts) {
-    const active = _selectedAccounts.has(a.account_id);
-    html += `<button class="tag-btn${active ? ' active' : ''}" onclick="toggleStockAccount(${a.account_id})" style="font-size:11px">${a.account_name}</button>`;
-  }
-  bar.innerHTML = html;
-}
-
-function toggleStockAccount(id) {
-  if (id === 'all') {
-    // 全选不受多选开关影响
-    if (_selectedAccounts.size === _stockAccounts.length) {
-      _selectedAccounts.clear();
-    } else {
-      _stockAccounts.forEach(a => _selectedAccounts.add(a.account_id));
-    }
-  } else {
-    if (_selectedAccounts.has(id)) _selectedAccounts.delete(id);
-    else _selectedAccounts.add(id);
-  }
-  // 全局变了，清除行级微调
-  _itemAccountExcludes = {};
-  _buildAccountBar();
-  renderShortage();
-  renderOrdersFromCache();
-  if (document.getElementById('instockCard')?.style.display !== 'none') {
-    renderInstock();
-  }
-}
-
-
-/** 行内点击账号标签：切换单个物品的单个账号 */
-function toggleItemAccount(itemId, accountId) {
-  if (!_itemAccountExcludes[itemId]) _itemAccountExcludes[itemId] = new Set();
-  const ex = _itemAccountExcludes[itemId];
-  if (ex.has(accountId)) ex.delete(accountId);
-  else ex.add(accountId);
-  if (!ex.size) delete _itemAccountExcludes[itemId];
-  renderInstock();
-  renderShortage();
-  renderOrdersFromCache();
-}
-
-// ── 根据选中账号计算物品库存 ──
-
-function _calcStockForItem(item, useAllAccounts) {
-  if (!useAllAccounts && !_selectedAccounts.size) return 0;
-  const excludes = _itemAccountExcludes[item.item_id];
-  return (item.account_stocks || [])
-    .filter(a => (useAllAccounts || _selectedAccounts.has(a.account_id)) && !(excludes && excludes.has(a.account_id)))
-    .reduce((s, a) => s + a.quantity, 0);
-}
-
-// ── 补货清单 ──
-
-function toggleShortageView(btn) {
-  _shortageShowAll = !_shortageShowAll;
-  btn.textContent  = _shortageShowAll ? '显示全部' : '只看缺货';
-  btn.classList.toggle('active', !_shortageShowAll);
-  renderShortage();
-}
-
-function markShortageGathered(item_id) {
-  _shortageGathered.add(item_id);
-  for (const [bundleId, itemIds] of Object.entries(_bundleItemsMap)) {
-    if (itemIds.has(item_id)) {
-      if ([...itemIds].every(id => _shortageGathered.has(id))) {
-        _shortageGathered.add(bundleId);
-      }
-    }
-  }
-  renderShortage();
-  renderInstock();
-  renderOrdersFromCache();
-}
+// ── 数据加载 ──
 
 async function loadShortage() {
   const raw = await api('/api/orders/shortage');
@@ -120,25 +26,104 @@ async function loadShortage() {
     }
   }
 
-  // 提取有库存的账号
-  const accMap = {};
-  for (const item of _shortageData) {
-    for (const a of (item.account_stocks || [])) {
-      if (!accMap[a.account_id]) {
-        accMap[a.account_id] = { account_id: a.account_id, account_name: a.account_name };
+  renderShortage();
+  _loadCraftDataForShortage();
+}
+
+// 异步加载合成数据
+async function _loadCraftDataForShortage() {
+  const filtered = _filterBySelectedOrders(_shortageData);
+  for (const item of filtered) {
+    if (_shortageCraftCache[item.item_id]) continue;
+    const data = await api(`/api/craft/craftable?item_id=${item.item_id}`);
+    if (data && data.accounts) {
+      _shortageCraftCache[item.item_id] = data;
+      renderShortage(); // 每加载一个就刷新
+    }
+  }
+}
+
+// ── 集齐 ──
+
+function markShortageGathered(item_id) {
+  _shortageGathered.add(item_id);
+  for (const [bundleId, itemIds] of Object.entries(_bundleItemsMap)) {
+    if (itemIds.has(item_id)) {
+      if ([...itemIds].every(id => _shortageGathered.has(id))) {
+        _shortageGathered.add(bundleId);
       }
     }
   }
-  _stockAccounts = Object.values(accMap).sort((a, b) => a.account_name.localeCompare(b.account_name));
+  renderShortage();
+  renderOrdersFromCache();
+}
 
-  // 默认全选
-  if (!_selectedAccounts.size) {
-    _stockAccounts.forEach(a => _selectedAccounts.add(a.account_id));
+// ── 拿货点击 ──
+
+function togglePickSource(itemId, accountId) {
+  if (!_shortagePickSources[itemId]) _shortagePickSources[itemId] = new Set();
+  const s = _shortagePickSources[itemId];
+  if (s.has(accountId)) s.delete(accountId);
+  else s.add(accountId);
+
+  // 更新该行状态
+  _updateRowStatus(itemId);
+
+  // 联动高亮订单
+  _highlightOrdersForItem(itemId);
+}
+
+function _updateRowStatus(itemId) {
+  const statusEl = document.getElementById('sstat_' + itemId);
+  if (!statusEl) return;
+
+  const filtered = _filterBySelectedOrders(_shortageData);
+  const item = filtered.find(i => i.item_id === itemId);
+  if (!item) return;
+
+  const picked = _shortagePickSources[itemId] || new Set();
+  let provided = 0;
+  for (const a of (item.account_stocks || [])) {
+    if (!picked.has(a.account_id)) continue;
+    provided += a.quantity;
+    // 加上可合成
+    const craft = _shortageCraftCache[itemId];
+    if (craft && craft.accounts) {
+      const ac = craft.accounts.find(x => x.account_id === a.account_id);
+      if (ac) provided += ac.craftable || 0;
+    }
   }
 
-  _buildAccountBar();
-  renderShortage();
+  const gap = Math.max(0, item.total_needed - provided);
+  const done = _shortageGathered.has(itemId) || gap === 0;
+
+  if (done) {
+    statusEl.innerHTML = '<span style="color:var(--success);font-weight:600">✓ 齐</span>';
+  } else if (picked.size === 0) {
+    statusEl.innerHTML = `<span style="color:var(--text3)">待分配</span>`;
+  } else {
+    statusEl.innerHTML = `<span style="color:var(--danger);font-weight:600">缺 ${gap}</span>`;
+  }
 }
+
+// ── 订单联动高亮 ──
+
+function _highlightOrdersForItem(itemId) {
+  // 清除之前的高亮
+  document.querySelectorAll('tr[id^="orow_"]').forEach(r => r.classList.remove('item-highlight'));
+
+  if (!itemId) return;
+  const filtered = _filterBySelectedOrders(_shortageData);
+  const item = filtered.find(i => i.item_id === itemId);
+  if (!item) return;
+
+  for (const o of (item.orders || [])) {
+    const row = document.getElementById('orow_' + o.order_id);
+    if (row) row.classList.add('item-highlight');
+  }
+}
+
+// ── 过滤 ──
 
 function _filterBySelectedOrders(items) {
   if (typeof _selectedOrders === 'undefined') return items;
@@ -146,175 +131,152 @@ function _filterBySelectedOrders(items) {
   return items.filter(item =>
     (item.orders || []).some(o => _selectedOrders.has(o.order_id))
   ).map(item => {
-    // 按选中的订单重新计算 total_needed
     const selectedOrders = (item.orders || []).filter(o => _selectedOrders.has(o.order_id));
     const needed = selectedOrders.reduce((s, o) => s + (o.quantity || 0), 0);
     return { ...item, total_needed: needed, orders: selectedOrders };
   });
 }
 
+// 根据选中的拿货来源计算库存
+function _calcStockForItem(item, useAllAccounts) {
+  const picked = _shortagePickSources[item.item_id];
+  if (picked && picked.size > 0) {
+    // 用拿货选择计算
+    return (item.account_stocks || [])
+      .filter(a => picked.has(a.account_id))
+      .reduce((s, a) => s + a.quantity, 0);
+  }
+  // 无选择时用全部账号
+  return (item.account_stocks || []).reduce((s, a) => s + a.quantity, 0);
+}
+
+// ── 渲染 ──
+
 function renderShortage() {
-  const items = _filterBySelectedOrders(_shortageData).map(item => {
-    const stock = _calcStockForItem(item);
-    const shortage = Math.max(0, item.total_needed - stock);
-    return { ...item, current_stock: stock, shortage };
+  const items = _filterBySelectedOrders(_shortageData);
+  if (!items.length) {
+    document.getElementById('shortageBody').innerHTML =
+      '<tr><td colspan="6" class="empty">暂无物品需求</td></tr>';
+    return;
+  }
+
+  // 已集齐排后面
+  const sorted = [...items].sort((a, b) => {
+    const aD = _shortageGathered.has(a.item_id) ? 1 : 0;
+    const bD = _shortageGathered.has(b.item_id) ? 1 : 0;
+    return aD - bD;
   });
 
-  const relevant = items.filter(item => item.shortage > 0 || item.current_stock < item.total_needed);
-  const gathered = relevant.filter(i =>  _shortageGathered.has(i.item_id));
-  const pending  = relevant.filter(i => !_shortageGathered.has(i.item_id));
-  const toShow   = _shortageShowAll ? [...pending, ...gathered] : pending;
+  document.getElementById('shortageBody').innerHTML = sorted.map(item => {
+    const done = _shortageGathered.has(item.item_id);
+    const picked = _shortagePickSources[item.item_id] || new Set();
 
-  document.getElementById('shortageBody').innerHTML = toShow.length
-    ? toShow.map(item => {
-      const done = _shortageGathered.has(item.item_id);
-      const bundles = item.bundle_groups || [];
-      return `<tr style="${done ? 'opacity:.45' : ''}">
-        <td><img class="item-img" src="/api/items/${item.item_id}/image" onerror="this.style.opacity=.2"
-          style="${done ? 'filter:grayscale(1)' : ''}"></td>
-        <td>
-          <div style="font-weight:500;${done ? 'text-decoration:line-through;color:var(--text3)' : ''}">${item.name_zh||item.item_id}</div>
-          ${bundles.length ? `<div style="margin-top:2px">${bundles.map(b =>
-            `<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.3);color:#a855f7">📦 ${b}</span>`
-          ).join(' ')}</div>` : ''}
-        </td>
-        <td style="font-size:13px;color:var(--text2)">${item.name_en||''}</td>
-        <td class="col-num" style="color:var(--text2)">${item.total_needed}</td>
-        <td class="col-num" style="color:var(--accent2)">${item.current_stock}</td>
-        <td class="col-num" style="font-weight:700;color:${done?'var(--success)':'var(--danger)'}">
-          ${done ? '✓' : '-'+item.shortage}
-        </td>
-        <td style="font-size:12px;color:var(--text2)">
-          ${item.orders.map(o => {
-            const idx = _orderIdToIdx[o.order_id];
-            const label = o.customer_name || ('#' + (idx !== undefined ? idx : o.order_id));
-            return `<span style="margin-right:4px">${label}</span>`;
-          }).join('')}
-        </td>
-        <td>
-          ${done
-            ? '<span style="display:inline-flex;align-items:center;gap:3px;padding:4px 10px;border-radius:4px;font-size:12px;font-weight:600;background:var(--success-light);color:var(--success);border:1px solid rgba(52,211,153,.3)">✓ 已集齐</span>'
-            : `<button class="btn small" onclick="markShortageGathered('${item.item_id}')" style="border-color:var(--accent);color:var(--accent)">集齐</button>`
-          }
-        </td>
-      </tr>`;
-    }).join('')
-    : '<tr><td colspan="8" class="empty">暂无缺货物品 ✓</td></tr>';
-}
+    // 计算状态
+    let provided = 0;
+    for (const a of (item.account_stocks || [])) {
+      if (!picked.has(a.account_id)) continue;
+      provided += a.quantity;
+      const craft = _shortageCraftCache[item.item_id];
+      if (craft && craft.accounts) {
+        const ac = craft.accounts.find(x => x.account_id === a.account_id);
+        if (ac) provided += ac.craftable || 0;
+      }
+    }
+    const gap = Math.max(0, item.total_needed - provided);
+    const fulfilled = done || gap === 0;
 
-// ── 存货分布 ──
+    // 状态显示
+    let statusHtml;
+    if (done) {
+      statusHtml = '<span style="color:var(--success);font-weight:600">✓ 齐</span>';
+    } else if (picked.size === 0) {
+      statusHtml = '<span style="color:var(--text3)">待分配</span>';
+    } else if (gap === 0) {
+      statusHtml = '<span style="color:var(--success);font-weight:600">✓ 齐</span>';
+    } else {
+      statusHtml = `<span style="color:var(--danger);font-weight:600">缺 ${gap}</span>`;
+    }
 
-async function loadInstock() {
-  const data = await api('/api/orders/instock');
-  _instockData = data || [];
-  renderInstock();
-}
+    // 各账号库存+合成标签
+    const accStocks = item.account_stocks || [];
+    const craftData = _shortageCraftCache[item.item_id];
+    const accHtml = accStocks.map(a => {
+      const isPicked = picked.has(a.account_id);
+      let craftQty = 0;
+      if (craftData && craftData.accounts) {
+        const ac = craftData.accounts.find(x => x.account_id === a.account_id);
+        if (ac) craftQty = ac.craftable || 0;
+      }
+      const total = a.quantity + craftQty;
+      const enough = total >= item.total_needed;
 
-function renderInstock() {
-  const items = _filterBySelectedOrders(_instockData).map(item => {
-    const filteredAccounts = (item.accounts || []).filter(a => _selectedAccounts.has(a.account_id));
-    const excludes = _itemAccountExcludes[item.item_id];
-    const activeAccounts = filteredAccounts.filter(a => !(excludes && excludes.has(a.account_id)));
-    const activeStock = activeAccounts.reduce((s, a) => s + a.quantity, 0);
-    const satisfied = activeStock >= item.total_needed || _shortageGathered.has(item.item_id);
-    return { ...item, _allAccounts: filteredAccounts, accounts: activeAccounts, total_stock: activeStock, satisfied };
-  }).filter(item => item._allAccounts.length > 0);
+      return `<span onclick="togglePickSource('${item.item_id}',${a.account_id})"
+        style="display:inline-flex;align-items:center;gap:3px;margin:1px 2px;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:12px;transition:all .12s;
+        ${isPicked
+          ? `background:${enough ? 'rgba(45,212,160,.15)' : 'var(--accent-light)'};border:1px solid ${enough ? 'rgba(45,212,160,.35)' : 'rgba(134,120,255,.3)'}`
+          : 'background:var(--bg3);border:1px solid var(--border)'
+        }">
+        <span style="color:${isPicked ? (enough ? 'var(--success)' : 'var(--accent)') : 'var(--text2)'};font-weight:500">${a.account_name}</span>
+        <span style="font-weight:600;color:${isPicked ? 'var(--text1)' : 'var(--text2)'}">×${a.quantity}</span>
+        ${craftQty > 0 ? `<span style="color:var(--accent);font-weight:600">+${craftQty}</span>` : ''}
+      </span>`;
+    }).join('');
 
-  // 账号排序统一（按 _stockAccounts 的顺序）
-  const accOrder = Object.fromEntries(_stockAccounts.map((a,i) => [a.account_id, i]));
-  items.forEach(item => {
-    item._allAccounts.sort((a,b) => (accOrder[a.account_id]??99) - (accOrder[b.account_id]??99));
-  });
+    // 来源订单（客户名 + 序号）
+    const orderHtml = (item.orders || []).map(o => {
+      const idx = _orderIdToIdx[o.order_id];
+      const label = o.customer_name
+        ? `${o.customer_name} #${idx !== undefined ? idx : o.order_id}`
+        : `#${idx !== undefined ? idx : o.order_id}`;
+      return `<span style="font-size:12px;color:var(--text2);margin-right:4px">${label}</span>`;
+    }).join('');
 
-  // 已满足/已集齐的排到末尾
-  items.sort((a,b) => (a.satisfied?1:0) - (b.satisfied?1:0));
-
-  document.getElementById('instockBody').innerHTML = items.length
-    ? items.map(item => {
-      const bundles = item.bundle_groups || [];
-      const excludes = _itemAccountExcludes[item.item_id];
-      const done = item.satisfied;
-      return `<tr style="${done ? 'opacity:.45' : ''}">
-        <td><img class="item-img" src="/api/items/${item.item_id}/image" onerror="this.style.opacity=.2"
-          style="${done ? 'filter:grayscale(1)' : ''}"></td>
-        <td>
-          <div style="font-weight:500;${done ? 'text-decoration:line-through;color:var(--text3)' : ''}">${item.name_zh||item.item_id}</div>
-          ${bundles.length ? `<div style="margin-top:2px">${bundles.map(b =>
-            `<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.3);color:#a855f7">📦 ${b}</span>`
-          ).join(' ')}</div>` : ''}
-        </td>
-        <td class="col-num" style="color:var(--text2)">${item.total_needed}</td>
-        <td class="col-num" style="color:${done ? 'var(--success)' : 'var(--accent2)'};font-weight:600">${item.total_stock}${done ? ' ✓' : ''}</td>
-        <td style="font-size:12px">
-          ${item._allAccounts.map(a => {
-            const excluded = excludes && excludes.has(a.account_id);
-            const enough = !excluded && a.quantity >= item.total_needed;
-            return `<span onclick="toggleItemAccount('${item.item_id}',${a.account_id})" title="${excluded ? '点击选入' : '点击排除'}"
-              style="display:inline-block;margin:1px 3px;padding:2px 8px;border-radius:4px;cursor:pointer;transition:opacity .15s;
-              ${excluded
-                ? 'opacity:.35;background:var(--bg3);border:1px dashed var(--border);text-decoration:line-through'
-                : `background:${enough ? 'rgba(34,197,94,.12)' : 'var(--bg3)'};border:1px solid ${enough ? 'rgba(34,197,94,.35)' : 'var(--border)'}`
-              }">
-              <span style="color:${excluded ? 'var(--text3)' : enough ? '#16a34a' : 'var(--text2)'};font-weight:${enough ? '600' : '400'}">${a.account_name}</span>
-              <span style="color:${excluded ? 'var(--text3)' : enough ? '#16a34a' : 'var(--accent2)'};font-weight:600;margin-left:4px">×${a.quantity}</span>
-            </span>`;
-          }).join('')}
-        </td>
-        <td>
-          ${done || _shortageGathered.has(item.item_id)
-            ? '<span style="display:inline-flex;align-items:center;gap:3px;padding:4px 10px;border-radius:4px;font-size:12px;font-weight:600;background:var(--success-light);color:var(--success);border:1px solid rgba(52,211,153,.3)">✓ 已集齐</span>'
-            : `<button class="btn small" onclick="markShortageGathered('${item.item_id}')" style="border-color:var(--accent);color:var(--accent)">集齐</button>`
-          }
-        </td>
-      </tr>`;
-    }).join('')
-    : '<tr><td colspan="6" class="empty">选中账号无相关库存</td></tr>';
+    return `<tr style="${fulfilled ? 'opacity:.45' : ''}"
+      onmouseenter="_highlightOrdersForItem('${item.item_id}')"
+      onmouseleave="_highlightOrdersForItem(null)">
+      <td><img class="item-img" src="/api/items/${item.item_id}/image" onerror="this.style.opacity=.2"
+        style="${fulfilled ? 'filter:grayscale(1)' : ''}"></td>
+      <td>
+        <div style="font-size:13px;font-weight:500;${fulfilled ? 'text-decoration:line-through;color:var(--text3)' : ''}">${item.name_zh || item.item_id}</div>
+        <div style="font-size:13px;color:var(--text3);margin-top:1px">${item.name_en || ''}</div>
+      </td>
+      <td class="col-num" style="font-weight:600">${item.total_needed}</td>
+      <td>${accHtml || '<span style="font-size:12px;color:var(--text3)">无库存</span>'}</td>
+      <td class="col-num" id="sstat_${item.item_id}">${statusHtml}</td>
+      <td>${orderHtml}</td>
+    </tr>`;
+  }).join('');
 }
 
 // ── 导出 ──
 
 function exportShortageText() {
   const filtered = _filterBySelectedOrders(_shortageData);
-  const items = filtered.map(item => {
-    const stock = _calcStockForItem(item);
-    const shortage = Math.max(0, item.total_needed - stock);
-    return { ...item, shortage };
-  });
-  const pending = items.filter(i => !_shortageGathered.has(i.item_id) && i.shortage > 0);
+  const pending = filtered.filter(i => !_shortageGathered.has(i.item_id));
   if (!pending.length) { toast('当前没有缺货物品', 'success'); return; }
 
-  // 按订单分组
   const orderMap = {};
   for (const item of pending) {
     for (const o of (item.orders || [])) {
       if (typeof _selectedOrders !== 'undefined' && _selectedOrders.size && !_selectedOrders.has(o.order_id)) continue;
       const key = o.order_id;
-      if (!orderMap[key]) orderMap[key] = { order_id: o.order_id, customer: o.customer_name || `#${_orderIdToIdx[o.order_id] || o.order_id}`, items: [] };
+      const idx = _orderIdToIdx[o.order_id];
+      if (!orderMap[key]) orderMap[key] = {
+        customer: o.customer_name ? `${o.customer_name} #${idx || o.order_id}` : `#${idx || o.order_id}`,
+        items: []
+      };
       if (!orderMap[key].items.find(x => x.item_id === item.item_id)) {
-        orderMap[key].items.push({ name: item.name_zh || item.item_id, shortage: item.shortage });
+        orderMap[key].items.push({ name: item.name_zh || item.item_id, needed: item.total_needed });
       }
     }
   }
 
   let text = '';
-  const orders = Object.values(orderMap);
-  for (const o of orders) {
+  for (const o of Object.values(orderMap)) {
     text += `【${o.customer}】\n`;
-    for (const it of o.items) text += `  ${it.name}  ×${it.shortage}\n`;
+    for (const it of o.items) text += `  ${it.name}  ×${it.needed}\n`;
     text += '\n';
   }
 
-  document.getElementById('shortageModalTitle').textContent = '补货清单';
-  const lineCount = Math.min(pending.length + 1, 20);
-  document.getElementById('shortageModalBody').innerHTML = `
-    <div style="margin-bottom:10px">
-      <textarea id="shortageText" readonly style="width:100%;height:${lineCount * 24 + 20}px;font-size:13px;line-height:1.8;
-        background:var(--bg2);color:var(--text1);border:1px solid var(--border);border-radius:6px;
-        padding:10px;font-family:inherit;resize:vertical">${text.trim()}</textarea>
-    </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn" onclick="navigator.clipboard.writeText(document.getElementById('shortageText').value).then(()=>toast('已复制','success'))">📋 复制</button>
-      <button class="btn" onclick="closeModal('shortageModal')">关闭</button>
-    </div>`;
-  document.getElementById('shortageModal').style.display = 'flex';
+  navigator.clipboard.writeText(text.trim()).then(() => toast('已复制到剪贴板', 'success'));
 }

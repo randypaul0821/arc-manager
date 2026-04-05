@@ -283,7 +283,7 @@ function toggleOrderSelect(id, checked) {
   }
   renderOrdersFromCache();
   renderShortage();
-  renderInstock();
+  renderShortage();
   _updateOrderCheckAll();
 }
 
@@ -293,7 +293,7 @@ function toggleAllOrders(checked) {
   if (checked) orders.forEach(o => _selectedOrders.add(o.id));
   renderOrdersFromCache();
   renderShortage();
-  renderInstock();
+  renderShortage();
 }
 
 function toggleOrderMultiSelect(checked) {
@@ -305,7 +305,7 @@ function toggleOrderMultiSelect(checked) {
     _selectedOrders.add(first);
     renderOrdersFromCache();
     renderShortage();
-    renderInstock();
+    renderShortage();
   }
 }
 
@@ -646,7 +646,7 @@ async function completeOrder(id, fromDetail=false) {
     if (fromDetail) closeModal('orderDetailModal');
     await loadOrders();
     await loadShortage();
-    if (document.getElementById('instockCard')?.style.display !== 'none') loadInstock();
+    renderShortage();
 
     // 轮询等待同步完成
     if (syncCount) {
@@ -664,7 +664,7 @@ async function completeOrder(id, fromDetail=false) {
           }
           // 刷新库存相关数据
           await loadShortage();
-          if (document.getElementById('instockCard')?.style.display !== 'none') loadInstock();
+          renderShortage();
         }
       }, 2000);
       // 最多轮询 2 分钟
@@ -682,7 +682,7 @@ async function cancelOrder(id, fromDetail=false) {
     if (fromDetail) closeModal('orderDetailModal');
     await loadOrders();
     await loadShortage();
-    if (document.getElementById('instockCard')?.style.display !== 'none') loadInstock();
+    renderShortage();
   } finally { _orderActionLock = false; }
 }
 
@@ -694,6 +694,6 @@ async function deleteOrder(id) {
     toast('已移入归档（7天后自动清除）');
     await loadOrders();
     await loadShortage();
-    if (document.getElementById('instockCard')?.style.display !== 'none') loadInstock();
+    renderShortage();
   } finally { _orderActionLock = false; }
 }

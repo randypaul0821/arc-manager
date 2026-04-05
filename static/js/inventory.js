@@ -315,10 +315,11 @@ function _invRenderRow1() {
 
   el.innerHTML = `
     <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;padding:6px 16px">
-      <div class="search-wrap" style="width:200px;margin-right:8px">
+      <div class="search-wrap" style="width:240px;margin-right:8px;position:relative">
         <span class="search-icon">⌕</span>
-        <input type="text" placeholder="搜索物品..." value="${_esc(inv.search)}"
-          oninput="invSetSearch(this.value)">
+        <input type="text" id="invSearchInput" placeholder="搜索物品..." value="${_esc(inv.search)}"
+          oninput="invSetSearch(this.value)" onfocus="invShowDropdown()" autocomplete="off">
+        <div id="invSearchDropdown" class="ac-dropdown" style="display:none;max-height:320px"></div>
       </div>
       <span style="font-size:11px;color:var(--text3);margin-right:2px">分类</span>
       <button class="tag-btn${!inv.group ? ' active' : ''}" onclick="invSetGroup('')">全部</button>
@@ -356,7 +357,76 @@ function invSetSearch(val) {
   inv.search = val;
   _invRenderRow3();
   _invLoadCraftData();
+  invShowDropdown();
 }
+
+function invShowDropdown() {
+  const dd = document.getElementById('invSearchDropdown');
+  if (!dd) return;
+  const q = (inv.search || '').toLowerCase().trim();
+  if (!q) { dd.style.display = 'none'; return; }
+
+  // 从 gameItems 中匹配（包括库存中没有的）
+  const matches = (inv.gameItems || []).filter(g =>
+    (g.name_zh || '').toLowerCase().includes(q) ||
+    (g.name_en || '').toLowerCase().includes(q) ||
+    g.item_id.includes(q)
+  ).slice(0, 15);
+
+  if (!matches.length) { dd.style.display = 'none'; return; }
+
+  dd.style.display = '';
+  dd.innerHTML = matches.map(g => {
+    // 查库存
+    const invItem = inv.items.find(i => i.item_id === g.item_id);
+    const total = invItem ? invItem.total : 0;
+    const hasRecipe = g.recipe && Object.keys(g.recipe).length > 0;
+    // 合成缓存
+    const craftData = inv.craftCache[g.item_id];
+    let craftTotal = 0;
+    if (craftData && craftData.accounts) {
+      craftTotal = craftData.accounts.reduce((s, a) => s + (a.craftable || 0), 0);
+    }
+    return `<div class="ac-item" onclick="invSelectSearchItem('${g.item_id}')">
+      <img src="/api/items/${g.item_id}/image" style="width:28px;height:28px;object-fit:contain;border-radius:4px;background:var(--bg2)" onerror="this.style.opacity=.2">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name_zh || g.item_id}</div>
+        <div style="font-size:11px;color:var(--text3)">${g.name_en || ''}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // 对有 recipe 但没缓存的物品异步加载合成数据
+  for (const g of matches) {
+    if (g.recipe && Object.keys(g.recipe).length && !inv.craftCache[g.item_id]) {
+      api(`/api/craft/craftable?item_id=${g.item_id}`).then(data => {
+        if (data && data.accounts) {
+          inv.craftCache[g.item_id] = data;
+          invShowDropdown(); // 刷新下拉
+        }
+      });
+      break; // 一次只加载一个，避免并发过多
+    }
+  }
+}
+
+function invSelectSearchItem(itemId) {
+  const g = (inv.gameItems || []).find(i => i.item_id === itemId);
+  if (g) {
+    inv.search = g.name_zh || g.item_id;
+    const input = document.getElementById('invSearchInput');
+    if (input) input.value = inv.search;
+  }
+  document.getElementById('invSearchDropdown').style.display = 'none';
+  _invRenderRow3();
+  _invLoadCraftData();
+}
+
+// 点击外部关闭下拉
+document.addEventListener('click', e => {
+  const dd = document.getElementById('invSearchDropdown');
+  if (dd && !e.target.closest('.search-wrap')) dd.style.display = 'none';
+});
 
 // 加载搜索结果中有 recipe 的物品的合成数据
 let _craftLoadTimer = null;
@@ -483,6 +553,30 @@ function _buildAccColumn(acc, maxFit) {
   // 获取该账号有库存的物品
   let items = inv.items.filter(it => (_getAccItemQty(it, acc.id) || 0) > 0);
 
+  // 搜索时：追加库存为0但可合成的物品
+  if (inv.search) {
+    const q = inv.search.toLowerCase();
+    const existIds = new Set(items.map(i => i.item_id));
+    for (const [itemId, craftData] of Object.entries(inv.craftCache)) {
+      if (existIds.has(itemId)) continue;
+      const accCraft = (craftData.accounts || []).find(a => a.account_id === acc.id);
+      if (!accCraft || accCraft.craftable <= 0) continue;
+      // 从 gameItems 获取物品信息
+      const gi = inv.gameItems.find(g => g.item_id === itemId);
+      if (!gi) continue;
+      if (!(gi.name_zh || '').toLowerCase().includes(q) &&
+          !(gi.name_en || '').toLowerCase().includes(q) &&
+          !gi.item_id.includes(q)) continue;
+      // 构造一个虚拟 inventory item 供显示
+      items.push({
+        item_id: itemId, name_zh: gi.name_zh, name_en: gi.name_en,
+        rarity: gi.rarity, type: gi.type, is_weapon: gi.is_weapon,
+        total: 0, accounts: [{ account_id: acc.id, account_name: acc.name, quantity: 0 }],
+        _craftOnly: true,
+      });
+    }
+  }
+
   // 过滤（全部/关注/其它 + 搜索）
   items = _filterItems(items, inv.search, acc.id, rules);
 
@@ -550,16 +644,6 @@ function _buildCardTile(item, accId, rules, bundled, gathered) {
 
   const qtyColor = lvl === 'red' ? '#ff7070' : lvl === 'yellow' ? '#e8b830' : '#ccc';
 
-  const tooltip = [
-    item.name_zh || item.item_id,
-    item.name_en || '',
-    INV_TYPE_LABELS[item.type] || item.type || '',
-    item.rarity || '',
-    bname ? `套餐: ${bname}` : '',
-    watchStatus === 'ok'    ? '✓ 关注物品充足' : '',
-    watchStatus === 'short' ? '⚠ 关注物品缺货' : '',
-  ].filter(Boolean).join('\n');
-
   // 合成数量（如果有缓存数据）
   const craftData = inv.craftCache[item.item_id];
   let craftQty = 0;
@@ -567,12 +651,28 @@ function _buildCardTile(item, accId, rules, bundled, gathered) {
     const accCraft = craftData.accounts.find(a => a.account_id === accId);
     if (accCraft) craftQty = accCraft.craftable || 0;
   }
-  const craftLabel = craftQty > 0 ? `<span class="tile-craft">+${craftQty}</span>` : '';
+
+  const tooltip = [
+    item.name_zh || item.item_id,
+    item.name_en || '',
+    INV_TYPE_LABELS[item.type] || item.type || '',
+    item.rarity || '',
+    `库存: ${qty}`,
+    craftQty > 0 ? `可合成: ${craftQty}` : '',
+    bname ? `套餐: ${bname}` : '',
+    watchStatus === 'ok'    ? '✓ 关注物品充足' : '',
+    watchStatus === 'short' ? '⚠ 关注物品缺货' : '',
+  ].filter(Boolean).join('\n');
+
+  // 库存0但可合成时，显示合成数作为主数字
+  const showQty = qty > 0 ? `<span class="tile-qty" style="color:${qtyColor}">×${qty}</span>` :
+                  craftQty > 0 ? `<span class="tile-qty" style="color:var(--accent)">⚒${craftQty}</span>` : `<span class="tile-qty" style="color:var(--text3)">×0</span>`;
+  const craftLabel = qty > 0 && craftQty > 0 ? `<span class="tile-craft">+${craftQty}</span>` : '';
 
   return `
-    <div class="inv-tile ${breatheClass}" data-tip="${_esc(tooltip)}">
+    <div class="inv-tile ${breatheClass}${qty === 0 && craftQty > 0 ? ' craft-only' : ''}" data-tip="${_esc(tooltip)}">
       <img src="/api/items/${item.item_id}/image" onerror="this.style.opacity=.2">
-      <span class="tile-qty" style="color:${qtyColor}">×${qty}</span>
+      ${showQty}
       ${craftLabel}
       ${_isStarredFor(item.item_id, rules) ? '<span class="tile-star">★</span>' : ''}
       ${bname ? '<span class="tile-bundle">套</span>' : ''}
