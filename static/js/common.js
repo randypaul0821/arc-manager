@@ -16,6 +16,62 @@ const state = {
 };
 
 // ═══════════════════════════════════════
+//  共享常量（消除跨文件重复）
+// ═══════════════════════════════════════
+
+const INV_TYPE_LABELS = {
+  'Assault Rifle':'突击步枪', 'Battle Rifle':'战斗步枪', 'SMG':'冲锋枪',
+  'LMG':'轻机枪', 'Shotgun':'霰弹枪', 'Sniper Rifle':'狙击步枪',
+  'Pistol':'手枪', 'Hand Cannon':'手炮', 'Shield':'护盾', 'Augment':'强化模组',
+  'Modification':'武器配件', 'Basic Material':'基础材料', 'Material':'材料',
+  'Refined Material':'精炼材料', 'Topside Material':'地表材料',
+  'Nature':'自然材料', 'Recyclable':'可回收品', 'Ammunition':'弹药',
+  'Quick Use':'快速使用品', 'Key':'钥匙', 'Blueprint':'蓝图',
+  'Trinket':'小物件', 'Special':'特殊物品', 'Outfit':'服装',
+  'Cosmetic':'装饰品', 'BackpackCharm':'背包挂饰', 'Misc':'杂项',
+};
+
+const INV_TYPE_GROUPS = [
+  { label:'武器',   types:['Assault Rifle','Battle Rifle','SMG','LMG','Shotgun','Sniper Rifle','Pistol','Hand Cannon'] },
+  { label:'装备',   types:['Shield','Augment','Modification'] },
+  { label:'材料',   types:['Basic Material','Material','Refined Material','Topside Material','Nature','Recyclable'] },
+  { label:'消耗品', types:['Ammunition','Quick Use'] },
+  { label:'其他',   types:['Key','Blueprint','Trinket','Special','Outfit','Cosmetic','BackpackCharm','Misc'] },
+];
+
+const INV_RARITIES = [
+  { value:'Legendary', label:'传说', color:'#b45309' },
+  { value:'Epic',      label:'史诗', color:'#7c3aed' },
+  { value:'Rare',      label:'稀有', color:'#1d4ed8' },
+  { value:'Uncommon',  label:'优秀', color:'#15803d' },
+  { value:'Common',    label:'普通', color:'var(--text3)' },
+];
+
+const INV_RARITY_ORDER = { Legendary:0, Epic:1, Rare:2, Uncommon:3, Common:4, '':9 };
+
+const INV_PALETTE = [
+  { bg:'rgba(12,35,64,.95)',  text:'#60a8f0', border:'#1a5a9e' },
+  { bg:'rgba(10,46,24,.95)',  text:'#44d090', border:'#158a50' },
+  { bg:'rgba(58,24,8,.95)',   text:'#f08050', border:'#b03818' },
+  { bg:'rgba(40,8,42,.95)',   text:'#cc60d0', border:'#802888' },
+  { bg:'rgba(58,44,0,.95)',   text:'#f0c030', border:'#b08010' },
+  { bg:'rgba(0,48,48,.95)',   text:'#38c0c0', border:'#0e8080' },
+  { bg:'rgba(50,12,28,.95)',  text:'#f05880', border:'#a02050' },
+  { bg:'rgba(24,32,0,.95)',   text:'#98c038', border:'#508010' },
+  { bg:'rgba(0,24,40,.95)',   text:'#38a0d0', border:'#0c6888' },
+  { bg:'rgba(30,12,0,.95)',   text:'#c08038', border:'#784010' },
+  { bg:'rgba(0,24,0,.95)',    text:'#58b858', border:'#187818' },
+  { bg:'rgba(28,0,32,.95)',   text:'#8058c8', border:'#401888' },
+];
+
+/** 确保 inv.colorIdx 已初始化（多页面共用） */
+function ensureColorIndex(accounts) {
+  if (!inv.colorIdx || !Object.keys(inv.colorIdx).length) {
+    (accounts || []).forEach((a, i) => { inv.colorIdx[a.id] = i; });
+  }
+}
+
+// ═══════════════════════════════════════
 //  工具函数
 // ═══════════════════════════════════════
 function fmtPrice(n) {
@@ -136,6 +192,8 @@ function showPage(name) {
   // 如果点击的是已激活页面且有子菜单，切换子菜单展开/收起
   if (isAlreadyActive && hasSub) {
     subNav.classList.toggle('open');
+    // 重点关注页：重复点击时回到 overview 主视图
+    if (name === 'bundle_monitor') _bmSwitchView('overview');
     return;
   }
 
@@ -197,40 +255,58 @@ function showPage(name) {
 // ═══════════════════════════════════════
 //  全局即时 tooltip（data-tip 属性）
 // ═══════════════════════════════════════
-(function() {
-  const tip = document.createElement('div');
-  tip.id = 'globalTip';
-  document.body.appendChild(tip);
+// 幂等防护：脚本意外被加载多次时也不会重复创建 tooltip 实例
+if (!window.__globalTipInitialized) {
+  window.__globalTipInitialized = true;
+  (function() {
+    const tip = document.createElement('div');
+    tip.id = 'globalTip';
+    document.body.appendChild(tip);
 
-  let _tipEl = null;
+    let _tipEl = null;
 
-  document.addEventListener('mouseover', e => {
-    _tipEl = e.target.closest('[data-tip]');
-    if (!_tipEl) { tip.style.display = 'none'; return; }
-    tip.textContent = _tipEl.dataset.tip;
-    tip.style.display = 'block';
-    _positionTip(e.clientX, e.clientY);
-  });
+    function _hideTip() {
+      tip.style.display = 'none';
+      _tipEl = null;
+    }
 
-  document.addEventListener('mousemove', e => {
-    if (!_tipEl || tip.style.display === 'none') return;
-    _positionTip(e.clientX, e.clientY);
-  });
+    document.addEventListener('mouseover', e => {
+      const newEl = e.target.closest('[data-tip]');
+      if (!newEl) { _hideTip(); return; }
+      _tipEl = newEl;
+      tip.textContent = newEl.dataset.tip || '';
+      tip.style.display = 'block';
+      _positionTip(e.clientX, e.clientY);
+    });
 
-  document.addEventListener('mouseout', e => {
-    if (e.target.closest('[data-tip]')) { tip.style.display = 'none'; _tipEl = null; }
-  });
+    document.addEventListener('mousemove', e => {
+      if (!_tipEl) return;
+      // 防御：当前 _tipEl 可能已被 DOM 重建脱离 document
+      // （例如 inventory 的网格刷新），此时主动复位
+      if (!_tipEl.isConnected) { _hideTip(); return; }
+      if (tip.style.display === 'none') return;
+      _positionTip(e.clientX, e.clientY);
+    });
 
-  function _positionTip(mx, my) {
-    const tw = tip.offsetWidth, th = tip.offsetHeight;
-    const vw = window.innerWidth || document.documentElement.clientWidth;
-    const vh = window.innerHeight || document.documentElement.clientHeight;
-    let left = mx + 12, top = my + 16;
-    if (vw > 0 && left + tw > vw - 4) left = mx - tw - 8;
-    if (vh > 0 && top + th > vh - 4) top = my - th - 8;
-    if (left < 4) left = 4;
-    if (top < 4) top = 4;
-    tip.style.left = left + 'px';
-    tip.style.top  = top + 'px';
-  }
-})();
+    document.addEventListener('mouseout', e => {
+      if (e.target.closest('[data-tip]')) _hideTip();
+    });
+
+    // DOM 大幅变化时（任何重新渲染）也兜底清掉残留 tip
+    // 由各页面 render 函数在重建前主动调用 hideGlobalTip()
+    window.hideGlobalTip = _hideTip;
+
+    function _positionTip(mx, my) {
+      const tw = tip.offsetWidth, th = tip.offsetHeight;
+      const vw = window.innerWidth || document.documentElement.clientWidth;
+      const vh = window.innerHeight || document.documentElement.clientHeight;
+      let left = mx + 12, top = my + 16;
+      if (vw > 0 && left + tw > vw - 4) left = mx - tw - 8;
+      if (vh > 0 && top + th > vh - 4) top = my - th - 8;
+      if (left < 4) left = 4;
+      if (top < 4) top = 4;
+      tip.style.left = left + 'px';
+      tip.style.top  = top + 'px';
+    }
+  })();
+}

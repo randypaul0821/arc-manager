@@ -2,7 +2,7 @@
 物品服务层：物品查询、改名、别名管理
 数据来源：arcraiders-data-main（只读） + item_overrides/item_aliases（DB）
 """
-import os, json, re, threading, logging
+import os, json, re, time, threading, logging
 from database import get_conn
 from config import DATA_DIR, APP_DIR
 
@@ -12,6 +12,11 @@ logger = logging.getLogger("item_service")
 
 _item_cache: dict = {}
 _cache_lock = threading.Lock()
+
+# names 缓存：避免多个 service 在同一请求流中反复调用 load_display_names/load_english_names
+_names_cache: dict = {}   # {"display": {...}, "english": {...}}
+_names_ts: float = 0      # 上次构建时间戳
+_NAMES_TTL = 5            # 秒，names 缓存有效期（足以覆盖单次请求流）
 
 CACHE_FILE = os.path.join(APP_DIR, "data", "items_cache.json")
 
@@ -72,10 +77,12 @@ def load_item_data() -> dict:
 
 def clear_item_cache():
     """清除缓存，下次访问时重新加载。线程安全。"""
-    global _item_cache
+    global _item_cache, _names_cache, _names_ts
     with _cache_lock:
         old_size = len(_item_cache)
         _item_cache = {}
+        _names_cache = {}
+        _names_ts = 0
         logger.info(f"物品缓存已清除（原有 {old_size} 条）")
 
 
@@ -128,25 +135,36 @@ def load_aliases_map() -> dict:
         return {}
 
 
-def load_display_names() -> dict:
-    """返回 {item_id: name_zh}，优先用改名，否则用 JSON 原始名"""
+def _rebuild_names_cache():
+    """重建 display/english 名称缓存"""
+    global _names_cache, _names_ts
     items_db  = load_item_data()
     overrides = load_overrides()
-    result = {}
+    display = {}
     for item_id, meta in items_db.items():
         ov = overrides.get(item_id, {})
-        result[item_id] = ov.get("name_zh") or meta["name_zh"]
+        display[item_id] = ov.get("name_zh") or meta["name_zh"]
     for item_id, ov in overrides.items():
-        if item_id not in result and ov.get("name_zh"):
-            result[item_id] = ov["name_zh"]
-    logger.debug(f"load_display_names: {len(result)} 条")
-    return result
+        if item_id not in display and ov.get("name_zh"):
+            display[item_id] = ov["name_zh"]
+    english = {iid: m.get("name_en", iid) for iid, m in items_db.items()}
+    _names_cache = {"display": display, "english": english}
+    _names_ts = time.time()
+    logger.debug(f"names 缓存已重建: display={len(display)}, english={len(english)}")
+
+
+def load_display_names() -> dict:
+    """返回 {item_id: name_zh}，优先用改名，否则用 JSON 原始名。带短期缓存。"""
+    if time.time() - _names_ts > _NAMES_TTL or "display" not in _names_cache:
+        _rebuild_names_cache()
+    return _names_cache["display"]
 
 
 def load_english_names() -> dict:
-    """返回 {item_id: name_en}"""
-    items_db = load_item_data()
-    return {item_id: meta.get("name_en", item_id) for item_id, meta in items_db.items()}
+    """返回 {item_id: name_en}。带短期缓存。"""
+    if time.time() - _names_ts > _NAMES_TTL or "english" not in _names_cache:
+        _rebuild_names_cache()
+    return _names_cache["english"]
 
 
 def load_search_aliases() -> dict:

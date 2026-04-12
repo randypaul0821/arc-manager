@@ -1,5 +1,5 @@
 """
-订单服务层：订单 CRUD、参与账号、备货清单
+订单服务层：订单 CRUD、参与账号、价格管理
 """
 import logging
 from datetime import datetime
@@ -217,13 +217,19 @@ def create_order(items: list, raw_text: str = "",
             ).fetchall()
             saved_prices = {r["item_id"]: (r["cost_price"] or 0, r["sell_price"] or 0) for r in price_rows}
 
-            # 给每个物品填充价格
+            # 给每个物品填充价格 + 清洗脏数据
             for it in items:
                 iid = it["item_id"]
                 if it.get("cost_price", 0) == 0 and it.get("sell_price", 0) == 0:
                     cp, sp = saved_prices.get(iid, (0, 0))
                     it["cost_price"] = cp
                     it["sell_price"] = sp
+                # 防御：成本价高于售价 → 清空成本（之前测试遗留的脏数据）
+                cp = it.get("cost_price", 0) or 0
+                sp = it.get("sell_price", 0) or 0
+                if cp > 0 and sp > 0 and cp > sp:
+                    logger.info(f"清空异常成本价 item={iid}: cost={cp} > sell={sp}")
+                    it["cost_price"] = 0
 
             total_cost    = sum(i.get("cost_price", 0) * i.get("quantity", 1) for i in items)
             total_revenue = sum(i.get("sell_price", 0) * i.get("quantity", 1) for i in items)
@@ -242,11 +248,81 @@ def create_order(items: list, raw_text: str = "",
                     (order_id, it["item_id"], it.get("raw_name", ""),
                      it["quantity"], it.get("cost_price", 0), it.get("sell_price", 0))
                 )
+                # 把本订单的有效价格固化到 item_prices 表（同时清掉旧的脏成本）
+                # 仅当传入的价格和历史不同 / 新清洗了成本才更新
+                final_cp = it.get("cost_price", 0) or 0
+                final_sp = it.get("sell_price", 0) or 0
+                old_cp, old_sp = saved_prices.get(it["item_id"], (0, 0))
+                if (final_cp != old_cp) or (final_sp != old_sp):
+                    conn.execute(
+                        "INSERT INTO item_prices (item_id, cost_price, sell_price, updated_at) "
+                        "VALUES (?, ?, ?, datetime('now')) "
+                        "ON CONFLICT(item_id) DO UPDATE SET "
+                        "cost_price=excluded.cost_price, "
+                        "sell_price=excluded.sell_price, "
+                        "updated_at=excluded.updated_at",
+                        (it["item_id"], final_cp, final_sp),
+                    )
             logger.info(f"订单创建成功: id={order_id}, cost={total_cost}, revenue={total_revenue}")
-            return order_id, ""
+
+        # ── 订单确认即认可：把每个匹配结果自动写成别名 ──
+        # 下次同样原文会直接命中 search_aliases 精确返回，绕过模糊匹配和 AI
+        _auto_create_aliases_from_order(items)
+
+        return order_id, ""
     except Exception as e:
         logger.error("创建订单异常", exc_info=True)
         return None, str(e)
+
+
+def _auto_create_aliases_from_order(items: list) -> None:
+    """
+    订单确认后，把 raw_name → item_id 的映射固化为别名。
+    规则：
+    - 只处理单品（套餐有自己的 bundle_aliases）
+    - raw_name 经过归一（剥 "ARC Raiders：" 前缀、去括号等）
+    - 跳过空名、< 2 字符、纯数字、已和显示名/英文名完全相同的
+    - 已存在的别名静默跳过（UNIQUE 冲突）
+    - 任何异常都吞掉，绝不影响订单主流程
+    """
+    try:
+        from services.match_service import _normalize_raw_name
+        from services.item_service import (
+            add_alias, load_display_names, load_english_names, load_search_aliases,
+        )
+        display_names = load_display_names()
+        english_names = load_english_names()
+        existing = load_search_aliases()  # {alias_lower: item_id}
+
+        for it in items:
+            if it.get("is_bundle"):
+                continue
+            iid = (it.get("item_id") or "").strip()
+            raw = (it.get("raw_name") or "").strip()
+            if not iid or not raw:
+                continue
+
+            norm = _normalize_raw_name(raw)
+            if not norm or len(norm) < 2 or norm.isdigit():
+                continue
+
+            disp = (display_names.get(iid) or "").strip()
+            en   = (english_names.get(iid) or "").strip()
+            if norm == disp or norm.lower() == en.lower():
+                continue
+
+            # 已经是该物品或别的物品的别名 → 跳过（避免覆盖用户手动设置的映射）
+            if norm.lower() in existing:
+                continue
+
+            ok, err = add_alias(iid, norm)
+            if ok:
+                logger.info(f"订单确认自动加别名: {iid} ← {norm}")
+                existing[norm.lower()] = iid  # 同一订单内防重复插入
+            else:
+                logger.debug(f"自动别名跳过: {iid} ← {norm} ({err})")
+    except Exception as e:
+        logger.warning(f"自动别名处理异常（不影响订单创建）: {e}")
 
 
 # ───────── 更新 ─────────
@@ -448,7 +524,7 @@ def complete_order(order_id: int, sync_account_ids: list = None) -> tuple[bool, 
         else:
             logger.info(f"[complete] 无参与账号，跳过同步")
 
-        return True, ""
+        return True, len(acc_ids)
     except Exception as e:
         logger.error(f"[complete] 订单 #{order_id} 异常", exc_info=True)
         return False, str(e)
@@ -579,245 +655,6 @@ def suggest_accounts(order_id: int) -> list:
     return result
 
 
-# ───────── 跨订单备货清单 ─────────
-
-def _expand_order_items(rows, conn) -> list:
-    """展开订单物品：__bundle__ 类型拆解为子物品，普通物品保持不变。
-    返回 [{item_id, quantity, order_id, customer_name, bundle_group, bundle_name}, ...]
-    bundle_group: None=普通物品, 'bundleName'=套餐子物品
-    """
-    # 收集所有需要展开的 bundle
-    bundle_ids_set = set()
-    for r in rows:
-        iid = r["item_id"]
-        if iid.startswith("__bundle__"):
-            try: bundle_ids_set.add(int(iid.replace("__bundle__", "")))
-            except (ValueError, TypeError): pass
-
-    # 批量查 bundle 组件
-    bundle_components = {}  # {bundle_id: [{item_id, quantity}]}
-    bundle_names = {}       # {bundle_id: name}
-    bundle_aliases = {}     # {bundle_id: alias}
-    bundle_types = {}       # {bundle_id: type}
-    if bundle_ids_set:
-        bids = list(bundle_ids_set)
-        bp = ','.join('?' * len(bids))
-        for b in conn.execute(f"SELECT id, name, type FROM bundles WHERE id IN ({bp})", bids).fetchall():
-            bundle_names[b["id"]] = b["name"]
-            bundle_types[b["id"]] = b["type"] or "item"
-            bundle_components[b["id"]] = []
-        for bi in conn.execute(
-            f"SELECT bundle_id, item_id, MAX(quantity) as quantity FROM bundle_items "
-            f"WHERE bundle_id IN ({bp}) GROUP BY bundle_id, item_id", bids
-        ).fetchall():
-            bundle_components[bi["bundle_id"]].append({"item_id": bi["item_id"], "quantity": bi["quantity"]})
-        for a in conn.execute(f"SELECT bundle_id, alias FROM bundle_aliases WHERE bundle_id IN ({bp})", bids).fetchall():
-            if a["bundle_id"] not in bundle_aliases:
-                bundle_aliases[a["bundle_id"]] = a["alias"]
-
-    # 展开
-    expanded = []
-    for r in rows:
-        iid = r["item_id"]
-        if iid.startswith("__bundle__"):
-            try: bid = int(iid.replace("__bundle__", ""))
-            except (ValueError, TypeError): continue
-            comps = bundle_components.get(bid, [])
-            bname = bundle_aliases.get(bid, bundle_names.get(bid, iid))
-            btype = bundle_types.get(bid, "item")
-            order_qty = r["quantity"]  # 套餐数量（组数）
-            if btype == "service":
-                # 纯服务套餐无物品，保留为套餐行不展开
-                expanded.append({
-                    "item_id":       iid,
-                    "quantity":      order_qty,
-                    "order_id":      r["order_id"],
-                    "customer_name": r["customer_name"],
-                    "bundle_group":  bname,
-                    "bundle_id":     bid,
-                    "is_service":    True,
-                })
-                continue
-            for comp in comps:
-                expanded.append({
-                    "item_id":       comp["item_id"],
-                    "quantity":      comp["quantity"] * order_qty,
-                    "order_id":      r["order_id"],
-                    "customer_name": r["customer_name"],
-                    "bundle_group":  bname,
-                    "bundle_id":     bid,
-                })
-        else:
-            expanded.append({
-                "item_id":       iid,
-                "quantity":      r["quantity"],
-                "order_id":      r["order_id"],
-                "customer_name": r["customer_name"],
-                "bundle_group":  None,
-                "bundle_id":     None,
-            })
-    return expanded
-
-
-def get_shortage_list() -> list:
-    logger.info("计算跨订单补货清单...")
-    with get_conn() as conn:
-        rows = conn.execute(
-            "SELECT oi.item_id, oi.quantity, oi.order_id, o.customer_name "
-            "FROM order_items oi "
-            "JOIN orders o ON oi.order_id=o.id "
-            "WHERE o.status='pending' AND oi.ready=0"
-        ).fetchall()
-
-        bundle_count = sum(1 for r in rows if r["item_id"].startswith("__bundle__"))
-        logger.info(f"补货清单原始行: {len(rows)} 行, 其中 {bundle_count} 个套餐行")
-
-        expanded = _expand_order_items(rows, conn)
-        logger.info(f"展开后: {len(expanded)} 行")
-
-        inv_rows = conn.execute(
-            "SELECT item_id, SUM(quantity) as total "
-            "FROM inventory i JOIN accounts a ON i.account_id=a.id "
-            "WHERE a.active=1 GROUP BY item_id"
-        ).fetchall()
-
-        # 各账号库存明细
-        acc_inv_rows = conn.execute(
-            "SELECT i.item_id, i.account_id, a.name as account_name, SUM(i.quantity) as qty "
-            "FROM inventory i JOIN accounts a ON i.account_id=a.id "
-            "WHERE a.active=1 GROUP BY i.item_id, i.account_id"
-        ).fetchall()
-
-    inv_map = {r["item_id"]: r["total"] for r in inv_rows}
-
-    # {item_id: [{account_id, account_name, quantity}]}
-    acc_inv_map = {}
-    for r in acc_inv_rows:
-        acc_inv_map.setdefault(r["item_id"], []).append({
-            "account_id": r["account_id"],
-            "account_name": r["account_name"],
-            "quantity": r["qty"],
-        })
-    names   = load_display_names()
-    en_names = load_english_names()
-
-    merged: dict = {}
-    for r in expanded:
-        iid = r["item_id"]
-        if iid not in merged:
-            merged[iid] = {
-                "item_id":       iid,
-                "name_zh":       names.get(iid, iid),
-                "name_en":       en_names.get(iid, ""),
-                "image_url":     f"/api/items/{iid}/image",
-                "total_needed":  0,
-                "current_stock": inv_map.get(iid, 0),
-                "account_stocks": acc_inv_map.get(iid, []),
-                "orders":        [],
-                "bundle_groups": [],
-                "bundle_ids":    [],
-            }
-        merged[iid]["total_needed"] += r["quantity"]
-        if r.get("bundle_group") and r["bundle_group"] not in merged[iid]["bundle_groups"]:
-            merged[iid]["bundle_groups"].append(r["bundle_group"])
-        bid = r.get("bundle_id")
-        if bid:
-            bkey = f"__bundle__{bid}"
-            if bkey not in merged[iid]["bundle_ids"]:
-                merged[iid]["bundle_ids"].append(bkey)
-        if not any(o["order_id"] == r["order_id"] for o in merged[iid]["orders"]):
-            merged[iid]["orders"].append({
-                "order_id":      r["order_id"],
-                "customer_name": r["customer_name"],
-                "quantity":      r["quantity"],
-            })
-
-    result = []
-    for item in merged.values():
-        item["shortage"] = max(0, item["total_needed"] - item["current_stock"])
-        result.append(item)
-
-    result.sort(key=lambda x: -x["shortage"])
-    short_count = sum(1 for x in result if x["shortage"] > 0)
-    logger.info(f"备货清单: {len(result)} 种物品, 其中 {short_count} 种缺货")
-    return result
-
-
-def get_instock_list() -> list:
-    """跨订单存货分布：展开套餐为子物品，按套餐分组展示"""
-    logger.info("计算跨订单存货分布...")
-    with get_conn() as conn:
-        rows = conn.execute(
-            "SELECT oi.item_id, oi.quantity, oi.order_id, o.customer_name "
-            "FROM order_items oi "
-            "JOIN orders o ON oi.order_id=o.id "
-            "WHERE o.status='pending' AND oi.ready=0"
-        ).fetchall()
-
-        expanded = _expand_order_items(rows, conn)
-
-        inv_rows = conn.execute(
-            "SELECT i.item_id, i.quantity, a.id as account_id, a.name as account_name "
-            "FROM inventory i JOIN accounts a ON i.account_id=a.id "
-            "WHERE a.active=1"
-        ).fetchall()
-
-    names   = load_display_names()
-    en_names = load_english_names()
-
-    # 按物品汇总需求，记录 bundle 归属
-    merged: dict = {}
-    for r in expanded:
-        iid = r["item_id"]
-        if iid not in merged:
-            merged[iid] = {
-                "item_id":       iid,
-                "name_zh":       names.get(iid, iid),
-                "name_en":       en_names.get(iid, ""),
-                "image_url":     f"/api/items/{iid}/image",
-                "total_needed":  0,
-                "orders":        [],
-                "accounts":      [],
-                "total_stock":   0,
-                "bundle_groups": [],
-            }
-        merged[iid]["total_needed"] += r["quantity"]
-        if r["bundle_group"] and r["bundle_group"] not in merged[iid]["bundle_groups"]:
-            merged[iid]["bundle_groups"].append(r["bundle_group"])
-        if not any(o["order_id"] == r["order_id"] for o in merged[iid]["orders"]):
-            merged[iid]["orders"].append({
-                "order_id":      r["order_id"],
-                "customer_name": r["customer_name"],
-                "quantity":      r["quantity"],
-            })
-
-    # 按物品+账号汇总库存
-    acc_stock: dict = {}
-    for r in inv_rows:
-        iid = r["item_id"]
-        if iid not in merged:
-            continue
-        aid = r["account_id"]
-        if iid not in acc_stock:
-            acc_stock[iid] = {}
-        if aid not in acc_stock[iid]:
-            acc_stock[iid][aid] = {"account_id": aid, "account_name": r["account_name"], "quantity": 0}
-        acc_stock[iid][aid]["quantity"] += r["quantity"]
-
-    # 组装结果
-    result = []
-    for iid, item in merged.items():
-        accounts = sorted(acc_stock.get(iid, {}).values(), key=lambda x: -x["quantity"])
-        item["accounts"] = accounts
-        item["total_stock"] = sum(a["quantity"] for a in accounts)
-        if item["total_stock"] > 0:
-            result.append(item)
-
-    result.sort(key=lambda x: (-x["total_stock"], x["name_zh"]))
-    logger.info(f"存货分布: {len(result)} 种物品有库存")
-    return result
-
-
 # ───────── 价格查询 ─────────
 
 def get_item_prices() -> dict:
@@ -827,294 +664,3 @@ def get_item_prices() -> dict:
     return {r["item_id"]: {"cost": r["cost_price"] or 0, "sell": r["sell_price"] or 0} for r in rows}
 
 
-# ───────── 统计 ─────────
-
-def get_stats(date_from: str = "2000-01-01", date_to: str = "2099-12-31") -> dict:
-    """计算指定日期范围内的订单统计数据"""
-    from datetime import date as dt_date, timedelta
-
-    logger.info(f"计算统计: from={date_from}, to={date_to}")
-
-    with get_conn() as conn:
-        orders = conn.execute("""
-            SELECT id, customer_name, completed_at, total_cost, total_revenue,
-                   total_revenue - total_cost as profit
-            FROM orders
-            WHERE status='completed'
-              AND date(completed_at) >= date(?) AND date(completed_at) <= date(?)
-            ORDER BY completed_at DESC
-        """, (date_from, date_to)).fetchall()
-
-        items_agg = conn.execute("""
-            SELECT oi.item_id, SUM(oi.quantity) as total_qty,
-                   SUM(oi.cost_price * oi.quantity) as total_cost,
-                   SUM(oi.sell_price * oi.quantity) as total_revenue
-            FROM order_items oi
-            JOIN orders o ON oi.order_id = o.id
-            WHERE o.status='completed'
-              AND date(o.completed_at) >= date(?) AND date(o.completed_at) <= date(?)
-            GROUP BY oi.item_id
-            ORDER BY total_revenue DESC
-        """, (date_from, date_to)).fetchall()
-
-        daily_rows = conn.execute("""
-            SELECT date(completed_at) as day,
-                   SUM(total_cost) as cost,
-                   SUM(total_revenue) as revenue,
-                   SUM(total_revenue - total_cost) as profit,
-                   COUNT(*) as count
-            FROM orders
-            WHERE status='completed'
-              AND date(completed_at) >= date(?) AND date(completed_at) <= date(?)
-            GROUP BY date(completed_at)
-            ORDER BY day
-        """, (date_from, date_to)).fetchall()
-
-    names = load_display_names()
-    items_out = []
-    for r in items_agg:
-        items_out.append({
-            **dict(r),
-            "name_zh": names.get(r["item_id"], r["item_id"]),
-            "profit":  (r["total_revenue"] or 0) - (r["total_cost"] or 0),
-        })
-
-    total_cost = sum((o["total_cost"] or 0) for o in orders)
-    total_rev  = sum((o["total_revenue"] or 0) for o in orders)
-
-    daily = {r["day"]: dict(r) for r in daily_rows}
-    try:
-        d_from = dt_date.fromisoformat(date_from)
-        d_to   = dt_date.fromisoformat(date_to)
-        if (d_to - d_from).days > 365:
-            d_from = d_to - timedelta(days=365)
-        daily_full = []
-        cur = d_from
-        while cur <= d_to:
-            ds = cur.isoformat()
-            dd = daily.get(ds, {"cost": 0, "revenue": 0, "profit": 0, "count": 0})
-            daily_full.append({
-                "day": ds,
-                "cost": dd.get("cost") or 0,
-                "revenue": dd.get("revenue") or 0,
-                "profit": dd.get("profit") or 0,
-                "count": dd.get("count") or 0,
-            })
-            cur += timedelta(days=1)
-    except Exception as e:
-        logger.warning(f"日期补全异常: {e}")
-        daily_full = [{
-            "day": r["day"],
-            "cost": r["cost"] or 0,
-            "revenue": r["revenue"] or 0,
-            "profit": r["profit"] or 0,
-            "count": r["count"],
-        } for r in daily_rows]
-
-    return {
-        "orders":        [dict(o) for o in orders],
-        "items":         items_out,
-        "daily":         daily_full,
-        "total_cost":    total_cost,
-        "total_revenue": total_rev,
-        "total_profit":  total_rev - total_cost,
-        "order_count":   len(orders),
-    }
-
-
-# ───────── 日报导出 ─────────
-
-def export_daily_report(date_from: str, date_to: str, price_type: str = "sell") -> str:
-    """
-    导出日报文本。
-    price_type: "sell" 用售价（给甲方），"cost" 用成本价（给自己）
-    """
-    logger.info(f"导出日报: from={date_from}, to={date_to}, type={price_type}")
-    names = load_display_names()
-
-    with get_conn() as conn:
-        orders = conn.execute("""
-            SELECT o.id, o.customer_name, o.completed_at, o.total_cost, o.total_revenue
-            FROM orders o
-            WHERE o.status='completed'
-              AND date(o.completed_at) >= date(?) AND date(o.completed_at) <= date(?)
-            ORDER BY o.completed_at ASC
-        """, (date_from, date_to)).fetchall()
-
-        if not orders:
-            return f"订单导出 {date_from} ~ {date_to}\n\n暂无已完成订单"
-
-        # 逐单获取物品
-        order_ids = [o["id"] for o in orders]
-        placeholders = ",".join("?" * len(order_ids))
-        items = conn.execute(f"""
-            SELECT order_id, item_id, raw_name, quantity, cost_price, sell_price
-            FROM order_items
-            WHERE order_id IN ({placeholders})
-            ORDER BY order_id, id
-        """, order_ids).fetchall()
-
-    # 按订单分组
-    from collections import defaultdict
-    order_items_map = defaultdict(list)
-    for it in items:
-        order_items_map[it["order_id"]].append(dict(it))
-
-    lines = [f"订单导出-{date_from}_{date_to}\n"]
-
-    for o in orders:
-        customer = o["customer_name"] or f"#{o['id']}"
-        lines.append(f"客户id：{customer}")
-        lines.append("=" * 24)
-
-        oi_list = order_items_map.get(o["id"], [])
-        for it in oi_list:
-            name = names.get(it["item_id"], it["raw_name"] or it["item_id"])
-            qty = it["quantity"]
-            lines.append(f"{name}  x{qty}")
-
-        lines.append("=" * 24)
-        if price_type == "sell":
-            amount = o["total_revenue"] or 0
-        else:
-            amount = o["total_cost"] or 0
-        lines.append(f"金额：（{amount:.2f}）")
-        lines.append("")
-
-    # 汇总
-    if price_type == "sell":
-        total = sum((o["total_revenue"] or 0) for o in orders)
-    else:
-        total = sum((o["total_cost"] or 0) for o in orders)
-    lines.append("=" * 24)
-    lines.append(f"共 {len(orders)} 单，总金额：{total:.2f}")
-
-    return "\n".join(lines)
-
-
-# ───────── AI 补货建议 ─────────
-
-def get_restock_advice(days: int = 14, restock_days: int = 1) -> list:
-    """
-    基于历史销售分析 + 当前库存，生成智能补货建议。
-    days: 统计销售的回溯天数
-    restock_days: 建议补货天数（补够几天的量）
-    """
-    import math
-    logger.info(f"AI补货建议: 回溯{days}天, 补{restock_days}天")
-    names = load_display_names()
-
-    with get_conn() as conn:
-        # 1. 最近 N 天已完成订单的物品销量（含 bundle 展开）
-        sold_rows = conn.execute("""
-            SELECT oi.item_id, oi.quantity, oi.order_id, o.customer_name
-            FROM order_items oi
-            JOIN orders o ON oi.order_id = o.id
-            WHERE o.status = 'completed'
-              AND date(o.completed_at, 'localtime') >= date('now', 'localtime', ?)
-        """, (f'-{days} days',)).fetchall()
-
-        expanded = _expand_order_items(sold_rows, conn)
-
-        # 汇总每个物品的总销量
-        sales = {}  # {item_id: total_qty}
-        for row in expanded:
-            iid = row["item_id"]
-            if iid.startswith("__bundle__"):
-                continue  # 跳过纯服务套餐行
-            sales[iid] = sales.get(iid, 0) + row["quantity"]
-
-        # 2. 待处理订单需求（pending + ready=0）
-        pending_rows = conn.execute("""
-            SELECT oi.item_id, oi.quantity, oi.order_id, o.customer_name
-            FROM order_items oi
-            JOIN orders o ON oi.order_id = o.id
-            WHERE o.status = 'pending' AND oi.ready = 0
-        """).fetchall()
-        pending_expanded = _expand_order_items(pending_rows, conn)
-        pending_demand = {}
-        for row in pending_expanded:
-            iid = row["item_id"]
-            if iid.startswith("__bundle__"):
-                continue
-            pending_demand[iid] = pending_demand.get(iid, 0) + row["quantity"]
-
-        # 3. 各账号库存
-        inv_rows = conn.execute("""
-            SELECT i.item_id, i.quantity, a.id as account_id, a.name as account_name
-            FROM inventory i
-            JOIN accounts a ON i.account_id = a.id
-            WHERE a.active = 1 AND i.quantity > 0
-        """).fetchall()
-
-    # 汇总库存
-    stock_by_item = {}   # {item_id: total}
-    account_stocks = {}  # {item_id: [{account_id, account_name, quantity}]}
-    for r in inv_rows:
-        iid = r["item_id"]
-        stock_by_item[iid] = stock_by_item.get(iid, 0) + r["quantity"]
-        if iid not in account_stocks:
-            account_stocks[iid] = []
-        account_stocks[iid].append({
-            "account_id": r["account_id"],
-            "account_name": r["account_name"],
-            "quantity": r["quantity"],
-        })
-
-    # 4. 合并所有有销量或有待处理需求的物品
-    all_items = set(sales.keys()) | set(pending_demand.keys())
-
-    result = []
-    for iid in all_items:
-        daily_avg = round(sales.get(iid, 0) / days, 1) if iid in sales else 0
-        current = stock_by_item.get(iid, 0)
-        pending = pending_demand.get(iid, 0)
-        days_left = round(current / daily_avg, 1) if daily_avg > 0 else 999
-
-        # 补货量 = 补够 restock_days 天用量 + 待处理需求 - 当前库存
-        target = math.ceil(daily_avg * restock_days) + pending
-        restock_qty = max(0, target - current)
-
-        if restock_qty <= 0:
-            continue  # 充足，跳过
-
-        # 紧急度
-        if days_left < 2:
-            level = "urgent"
-        elif days_left < restock_days + 2:
-            level = "warning"
-        else:
-            continue  # 充足
-
-        # 调货建议
-        accs = account_stocks.get(iid, [])
-        accs_sorted = sorted(accs, key=lambda a: a["quantity"], reverse=True)
-        transfer_parts = []
-        transferred = 0
-        for a in accs_sorted:
-            take = min(a["quantity"], restock_qty - transferred)
-            if take <= 0:
-                break
-            transfer_parts.append(f"{a['account_name']}调{take}")
-            transferred += take
-        ext = restock_qty - transferred
-        if ext > 0 and transfer_parts:
-            transfer_parts.append(f"外补{ext}")
-
-        result.append({
-            "item_id": iid,
-            "name_zh": names.get(iid, iid),
-            "daily_avg": daily_avg,
-            "current_stock": current,
-            "pending_demand": pending,
-            "days_left": days_left,
-            "restock_qty": restock_qty,
-            "level": level,
-            "account_stocks": accs_sorted,
-            "transfer": " ".join(transfer_parts) if transfer_parts else "",
-        })
-
-    # 排序：急补在前，再按可撑天数升序
-    result.sort(key=lambda x: (0 if x["level"] == "urgent" else 1, x["days_left"]))
-    logger.info(f"AI补货建议: {len(result)} 个物品")
-    return result

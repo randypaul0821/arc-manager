@@ -83,7 +83,7 @@ def api_sync_account(aid):
 @accounts_bp.route("/api/accounts/sync-all", methods=["POST"])
 def api_sync_all():
     logger.info("POST /api/accounts/sync-all")
-    results = sync_all_active()
+    results = sync_all_active(force=True)
     return jsonify({"ok": True, "results": results})
 
 

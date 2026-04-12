@@ -47,7 +47,11 @@ function setCompletedRange() {
   loadOrders();
 }
 
-async function loadOrders() {
+/**
+ * @param {object} [opts]
+ * @param {number[]} [opts.selectIds] — 加载完成后强制选中这些订单 ID
+ */
+async function loadOrders(opts) {
   const status = state.orders.activeTab || 'pending';
   let url = `/api/orders?status=${status}`;
   if (status === 'completed') {
@@ -73,10 +77,15 @@ async function loadOrders() {
   state.orders.all = orders || [];
 
   if (status === 'pending') {
-    Object.keys(_orderIdToIdx).forEach(k => delete _orderIdToIdx[k]);
-    orders.forEach((o, idx) => { _orderIdToIdx[o.id] = idx + 1; });
-    // 清理已不存在的订单选择，默认选第一个
     const ids = new Set(orders.map(o => o.id));
+
+    // 如果调用方指定了要选中的订单（如刚创建的），在列表加载后强制选中
+    if (opts && opts.selectIds && opts.selectIds.length) {
+      _selectedOrders.clear();
+      opts.selectIds.forEach(id => { if (ids.has(id)) _selectedOrders.add(id); });
+    }
+
+    // 清理已不存在的订单选择，默认选第一个
     [..._selectedOrders].forEach(id => { if (!ids.has(id)) _selectedOrders.delete(id); });
     if (!_selectedOrders.size && orders.length) _selectedOrders.add(orders[0].id);
   }
@@ -203,7 +212,7 @@ function renderOrdersFromCache() {
     const chk = _selectedOrders.has(o.id);
     return `<tr id="orow_${o.id}" style="${rowBg}${isPending && !chk ? ';opacity:.5' : ''}">
       <td style="text-align:center">${isPending ? `<input type="checkbox" ${chk?'checked':''} onchange="toggleOrderSelect(${o.id},this.checked)" style="cursor:pointer;width:16px;height:16px">` : ''}</td>
-      <td style="color:var(--text3);font-size:12px;white-space:nowrap;cursor:pointer" onclick="this.parentElement.querySelector('input[type=checkbox]')?.click()">#${idx} ${o.customer_name ? `<span style="color:var(--text1);font-weight:600">${o.customer_name}</span>` : ''}</td>
+      <td style="color:var(--text3);font-size:12px;white-space:nowrap;cursor:pointer" onclick="this.parentElement.querySelector('input[type=checkbox]')?.click()">#${o.id} ${o.customer_name ? `<span style="color:var(--text1);font-weight:600">${o.customer_name}</span>` : ''}</td>
       <td style="cursor:pointer" onclick="this.parentElement.querySelector('input[type=checkbox]')?.click()">
         <div style="display:flex;flex-wrap:wrap;align-items:center;gap:2px">${itemsHtml}</div>
       </td>
@@ -639,64 +648,36 @@ let _orderActionLock = false;
 async function completeOrder(id, fromDetail=false) {
   if (_orderActionLock) return; _orderActionLock = true;
   try {
-    // 从存货分布里算出参与的账号：选中的且未被行级排除的、有订单物品库存的账号
-    const order = state.orders.all.find(o => o.id === id);
-    const orderItemIds = new Set((order?.items || []).map(it => it.item_id));
-    const involvedAccIds = new Set();
-    for (const item of _instockData) {
-      // 检查此物品是否属于本订单（直接匹配或套餐展开后的子物品）
-      if (!orderItemIds.has(item.item_id)) continue;
-      const excludes = _itemAccountExcludes[item.item_id];
-      for (const a of (item.accounts || [])) {
-        if (_selectedAccounts.has(a.account_id) && !(excludes && excludes.has(a.account_id))) {
-          involvedAccIds.add(a.account_id);
-        }
-      }
-    }
-    // 也检查 _shortageData 里展开的套餐子物品
-    for (const item of _shortageData) {
-      const bids = item.bundle_ids || [];
-      if (!bids.some(bid => orderItemIds.has(bid)) && !orderItemIds.has(item.item_id)) continue;
-      const excludes = _itemAccountExcludes[item.item_id];
-      for (const a of (item.account_stocks || [])) {
-        if (_selectedAccounts.has(a.account_id) && !(excludes && excludes.has(a.account_id))) {
-          involvedAccIds.add(a.account_id);
-        }
-      }
-    }
-
+    // 传空数组，由后端兜底计算涉及的账号并触发同步
     const res = await api(`/api/orders/${id}/complete`, {
       method: 'POST',
-      body: JSON.stringify({ sync_account_ids: [...involvedAccIds] })
+      body: JSON.stringify({ sync_account_ids: [] })
     });
     if (res.error) return toast('完成失败: ' + res.error, 'error');
-    const syncCount = involvedAccIds.size;
+    const syncCount = res.synced_accounts || 0;
     toast(syncCount ? `订单已完成，${syncCount} 个账号同步中…` : '订单已完成', 'success');
     if (fromDetail) closeModal('orderDetailModal');
     await loadOrders();
     await loadShortage();
     renderShortage();
 
-    // 轮询等待同步完成
+    // 轮询等待同步完成（后端自动触发了相关账号同步）
     if (syncCount) {
-      const syncIds = [...involvedAccIds];
       const pollSync = setInterval(async () => {
         const accounts = await api('/api/accounts');
-        const syncing = accounts.filter(a => syncIds.includes(a.id) && a.sync_status === 'syncing');
+        const syncing = accounts.filter(a => a.sync_status === 'syncing');
         if (!syncing.length) {
           clearInterval(pollSync);
-          const failed = accounts.filter(a => syncIds.includes(a.id) && a.sync_status === 'error');
+          const failed = accounts.filter(a => a.sync_status === 'error');
           if (failed.length) {
             toast(`同步完成，${failed.length} 个账号失败`, 'error');
           } else {
             toast('所有账号同步完成', 'success');
           }
-          // 刷新库存相关数据
           await loadShortage();
           renderShortage();
         }
       }, 2000);
-      // 最多轮询 2 分钟
       setTimeout(() => clearInterval(pollSync), 120000);
     }
   } finally { _orderActionLock = false; }

@@ -3,8 +3,12 @@
 这是系统的核心算法，从 app.py 剥离并重构
 """
 import re
+import logging
+from config import UNIT_PRICE_SANITY_MAX, COIN_UNIT_PRICE
 from services.item_service import load_item_data, load_display_names, load_search_aliases
 from services.bundle_service import get_all_bundles, load_bundle_search_map, get_bundle_with_items
+
+logger = logging.getLogger("match_service")
 
 
 # ───────── 工具函数 ─────────
@@ -48,29 +52,358 @@ def strip_structural(s: str, strip_mk: bool = False) -> str:
     return re.sub(r'\s+', ' ', s).strip()
 
 
+# 全角罗马数字 → 半角映射（用于 tier 提取前的归一）
+_ROMAN_UNICODE_TO_ASCII = {
+    'Ⅰ': 'I', 'Ⅱ': 'II', 'Ⅲ': 'III', 'Ⅳ': 'IV', 'Ⅴ': 'V',
+    'Ⅵ': 'VI', 'Ⅶ': 'VII', 'Ⅷ': 'VIII', 'Ⅸ': 'IX', 'Ⅹ': 'X',
+    'ⅰ': 'I', 'ⅱ': 'II', 'ⅲ': 'III', 'ⅳ': 'IV', 'ⅴ': 'V',
+    'ⅵ': 'VI', 'ⅶ': 'VII', 'ⅷ': 'VIII', 'ⅸ': 'IX', 'ⅹ': 'X',
+}
+_ROMAN_TO_NUM = {'i': 1, 'ii': 2, 'iii': 3, 'iv': 4, 'v': 5, 'vi': 6, 'vii': 7, 'viii': 8, 'ix': 9, 'x': 10}
+
+
+def _extract_roman_tier(name: str) -> int | None:
+    """
+    从名称末尾提取罗马数字等级，返回 1-10 或 None。
+    只识别结尾处的罗马数字，避免误把英文名里的 I/II 当 tier。
+    允许前面是空格/下划线/短横/中文字符（如 "颂歌IV"），但前一个必须不是英文字母。
+    示例：
+      "铁砧 IV"     → 4
+      "风暴Ⅱ"       → 2   (全角已预归一)
+      "颂歌IV"      → 4
+      "Anvil III"   → 3
+      "Iron Sight"  → None  (Sight 全是字母，结尾不是纯罗马数字)
+      "Mk III"      → 3
+    """
+    if not name:
+        return None
+    # 先把全角罗马数字归一成半角
+    s = ''.join(_ROMAN_UNICODE_TO_ASCII.get(c, c) for c in name).strip()
+    # 末尾必须是纯罗马数字 token，token 前必须不是英文字母（否则像 "Sight" 也会被匹到 "t"）
+    m = re.search(r'(^|[^A-Za-z])([IVX]+)\s*$', s)
+    if not m:
+        return None
+    return _ROMAN_TO_NUM.get(m.group(2).lower())
+
+
 # ───────── 订单文本解析 ─────────
+
+# ── 单行物品格式匹配器（按优先级排序）──
+# 每个函数接收 line: str，返回 dict | list[dict] | None
+# 返回 dict 表示匹配到一个物品，list 表示一行多物品，None 表示不匹配
+
+def _parse_coin(line: str):
+    """金币格式：250k / 80w / 100万 (后面可带 金币/金/coin)"""
+    if '名称' in line or '购买数量' in line:
+        return None
+    m = re.search(r'(\d+(?:\.\d+)?)\s*([wW万kK])?\s*(?:金币|金|[Cc]oin[s]?)?', line)
+    if not m:
+        return None
+    num_str, unit = m.group(1), (m.group(2) or '').lower()
+    num = float(num_str)
+    if unit in ('w', '万'):   num *= 10000
+    elif unit == 'k':         num *= 1000
+    if num >= 1000 and (unit or '金' in line or 'coin' in line.lower()):
+        return {"raw_name": m.group(0).strip(), "quantity": 1,
+                "_is_coin": True, "_coin_amount": int(num)}
+    return None
+
+
+def _parse_buy_total(line: str):
+    """格式 E：<总价>收<数量><名称>  例: '8收50炸药混合物'"""
+    m = re.match(r'^\s*(\d+(?:\.\d+)?)\s*收\s*(\d+)\s*(\S.*?)\s*$', line)
+    if not m:
+        return None
+    total, qty, name = float(m.group(1)), int(m.group(2)), m.group(3).strip()
+    if name and qty > 0:
+        return {"raw_name": name, "quantity": qty, "unit_price": round(total / qty, 6)}
+    return None
+
+
+def _parse_buy_unit(line: str):
+    """格式 F：收<数量><名称> <单价>/1  例: '收40arc 线圈 0.25/1'"""
+    m = re.match(r'^\s*收\s*(\d+)\s*(\S.*?)\s*(\d+(?:\.\d+)?)\s*/\s*1?\s*$', line)
+    if not m:
+        return None
+    qty, name, price = int(m.group(1)), m.group(2).strip(), float(m.group(3))
+    if name and qty > 0:
+        return {"raw_name": name, "quantity": qty, "unit_price": price}
+    return None
+
+
+def _parse_star_paren(line: str):
+    """格式 B：*<数量>(<名称>) <单价>/  例: '*3(发动机) 0.4/'"""
+    m = re.match(
+        r'^\s*\*\s*(\d+)\s*[(（]\s*(.+?)\s*[)）]\s*(\d+(?:\.\d+)?)\s*/?\s*$', line)
+    if not m:
+        return None
+    qty, name, price = int(m.group(1)), m.group(2).strip(), float(m.group(3))
+    if name and qty > 0:
+        return {"raw_name": name, "quantity": qty, "unit_price": price}
+    return None
+
+
+def _parse_name_star(line: str):
+    """格式 A：<名称>*<数量> [<单价>]  例: '火箭手*21', '处理器*10 0.15'"""
+    m = re.match(
+        r'^\s*(\S.*?)\s*\*\s*(\d+)(?:\s+(\d+(?:\.\d+)?)\s*[rR元¥]?\s*(?:/\s*[个组张]?)?)?\s*$',
+        line)
+    if not m:
+        return None
+    name, qty, price = m.group(1).strip(), int(m.group(2)), m.group(3)
+    if name and qty > 0:
+        item = {"raw_name": name, "quantity": qty}
+        if price is not None:
+            item["unit_price"] = float(price)
+        return item
+    return None
+
+
+def _parse_qty_star(line: str):
+    """格式 A2：<数量>*<名称>  例: '100*高级机械元件'"""
+    m = re.match(r'^\s*(\d+)\s*\*\s*(\S.+?)\s*$', line)
+    if not m:
+        return None
+    qty, name = int(m.group(1)), m.group(2).strip()
+    if name and qty > 0:
+        return {"raw_name": name, "quantity": qty}
+    return None
+
+
+def _parse_qty_x_name(line: str):
+    """格式 A3：<数量>x<名称> [<单价>/个]  例: '2x 跳跃者脉冲单元', '8x 投弹手电池 0.8/个'"""
+    m = re.match(
+        r'^\s*(\d+)\s*[xX×][\s\t]+(\S.*?)(?:[\s\t]+(\d+(?:\.\d+)?)\s*/\s*[个组]?)?\s*$',
+        line)
+    if not m:
+        return None
+    qty, name, price = int(m.group(1)), m.group(2).strip(), m.group(3)
+    if name and qty > 0:
+        item = {"raw_name": name, "quantity": qty}
+        if price is not None:
+            item["unit_price"] = float(price)
+        return item
+    return None
+
+
+def _parse_name_x_total(line: str):
+    """格式 C2：<名称> X<数量> 价格 <总价>  例: '掩埋废城市政厅钥匙 X3 价格 7.5'"""
+    m = re.match(
+        r'^\s*(\S.*?)\s*[xX×]\s*(\d+)\s*价格\s*(\d+(?:\.\d+)?)\s*$', line)
+    if not m:
+        return None
+    name, qty, total = m.group(1).strip(), int(m.group(2)), float(m.group(3))
+    if name and qty > 0:
+        return {"raw_name": name, "quantity": qty, "unit_price": round(total / qty, 6)}
+    return None
+
+
+def _parse_name_x_qty(line: str):
+    """格式 C：<名称>X<数量> [<单价>]  例: '钢制弹簧X35', '(勘测师保险库) x 4 0.8'"""
+    m = re.match(r'^\s*(\S.*?)\s*[xX×]\s*(\d+)(?:\s+(\d+(?:\.\d+)?))?\s*$', line)
+    if not m:
+        return None
+    name, qty, price = m.group(1).strip(), int(m.group(2)), m.group(3)
+    if name and qty > 0:
+        item = {"raw_name": name, "quantity": qty}
+        if price is not None:
+            item["unit_price"] = float(price)
+        return item
+    return None
+
+
+def _parse_compact(line: str):
+    """紧凑格式：<数量><名称><单价>[r/元]一个  例: '2女王1.2一个', '4汽化1.5r一个'"""
+    m = re.match(
+        r'^\s*(\d+)\s*(\S.*?)\s*(\d+(?:\.\d+)?)\s*[rR元]?\s*(?:一个|一组|一张|个|张)\s*$',
+        line)
+    if not m:
+        return None
+    qty, name, price = int(m.group(1)), m.group(2).strip(), float(m.group(3))
+    if name and qty > 0:
+        return {"raw_name": name, "quantity": qty, "unit_price": price}
+    return None
+
+
+def _parse_generic(line: str):
+    """通用格式：名称：xxx 购买数量：N组"""
+    results = []
+    for m in re.finditer(
+        r'名称\s*[：:]\s*(.+?)\s*购买数量\s*[：:]\s*(\d+)\s*组', line
+    ):
+        raw_name = m.group(1).strip()
+        quantity = int(m.group(2))
+        if not raw_name or quantity <= 0:
+            continue
+        # 检查是否是金币格式
+        m_coin = re.match(r'^(\d+(?:\.\d+)?)\s*([wW万kK])?$', raw_name)
+        if m_coin:
+            num = float(m_coin.group(1))
+            unit = (m_coin.group(2) or '').lower()
+            if unit in ('w', '万'):   num *= 10000
+            elif unit == 'k':         num *= 1000
+            if num >= 1000:
+                results.append({"raw_name": raw_name, "quantity": quantity,
+                                "_is_coin": True, "_coin_amount": int(num * quantity)})
+                continue
+        results.append({"raw_name": raw_name, "quantity": quantity})
+    return results if results else None
+
+
+_QTY_WORDS = '个卷根条块把张片颗支瓶箱组套份只'
+
+
+def _parse_qty_unit_total(line: str):
+    """格式 J：<数量>[量词]<名称> <价格>[/][个|组|r]?
+    例: '3 个发动机  1.5'  → 待定（历史对比）
+        '4个脉冲单元 0.5/' → 有 / 后缀 → 明确单价
+        '10个ARC线圈 2'   → 待定
+    有单价标记（/、r、/个）时直接当单价，否则标记为待定交给 parse_and_match 判别。"""
+    m = re.match(
+        r'^\s*(\d+)\s*([' + _QTY_WORDS + r'])\s*(\S.*?)'
+        r'\s+(\d+(?:\.\d+)?)\s*([rR/]?\s*[' + _QTY_WORDS + r']?)?\s*$',
+        line
+    )
+    if not m:
+        return None
+    qty    = int(m.group(1))
+    name   = m.group(3).strip()
+    price  = float(m.group(4))
+    suffix = (m.group(5) or '').strip()  # 如 "/"、"r"、"/个"、""
+
+    if not name or len(name) < 2 or qty <= 0 or price <= 0:
+        return None
+
+    # 有单价标记（/ 或 r）→ 明确是单价
+    if suffix:
+        if price <= UNIT_PRICE_SANITY_MAX:
+            return {"raw_name": name, "quantity": qty, "unit_price": price}
+        return None
+
+    # 无标记 → 待定，由 parse_and_match 参照历史判别
+    if price <= UNIT_PRICE_SANITY_MAX * qty:
+        return {
+            "raw_name": name, "quantity": qty,
+            "_price_ambiguous": True,
+            "_raw_price": price,
+        }
+    return None
+
+
+def _parse_qty_name_price(line: str):
+    """格式 I：<数量>[空格?]<名称><单价>（价格紧贴名称、无量词 → 单价模式）
+    例: '10勘探师保险库0.6', '20 ARC合成树脂0.5'
+    单价必须 ≤ UNIT_PRICE_SANITY_MAX（经验上限），超过则视为物品名的一部分。
+    名称部分必须 ≥2 字符且含中文或英文字母，防止误匹配纯数字行。"""
+    m = re.match(
+        r'^\s*(\d+)\s*([A-Za-z\u4e00-\u9fff][\S\s]*?)(\d+(?:\.\d+)?)\s*$', line
+    )
+    if not m:
+        return None
+    qty   = int(m.group(1))
+    name  = m.group(2).strip()
+    price = float(m.group(3))
+    if name and len(name) >= 2 and qty > 0 and 0 < price <= UNIT_PRICE_SANITY_MAX:
+        return {"raw_name": name, "quantity": qty, "unit_price": price}
+    return None
+
+
+def _parse_qty_bare(line: str):
+    """格式 G：<数量>[量词]<名称>  例: '50ARC线圈', '100个处理器'"""
+    m = re.match(r'^\s*(\d+)\s*([个卷根条块把张片颗支瓶箱组套份只])(\S{2,}.*?)\s*$', line)
+    if not m:
+        m = re.match(r'^\s*(\d+)([A-Za-z\u4e00-\u9fff]\S*.*?)\s*$', line)
+    if not m:
+        return None
+    qty = int(m.group(1))
+    name = m.group(len(m.groups())).strip()
+    if name and qty > 0:
+        return {"raw_name": name, "quantity": qty}
+    return None
+
+
+def _parse_name_num(line: str):
+    """格式 H：<中文名><数量>  例: '导线60', '高级机械零件 20'"""
+    m = re.match(r'^\s*([\u4e00-\u9fff][\u4e00-\u9fff\w]*?)\s*(\d+)\s*$', line)
+    if not m:
+        return None
+    name, qty = m.group(1).strip(), int(m.group(2))
+    if name and qty > 0:
+        return {"raw_name": name, "quantity": qty}
+    return None
+
+
+# 格式匹配器优先级列表（顺序很重要，具体格式在前、宽泛格式在后）
+_LINE_PARSERS = [
+    _parse_coin,
+    # E/F（含"收"字的格式）已在 parse_order_text 主循环中优先处理，不放这里
+    _parse_star_paren,     # B: *<数量>(<名称>) <单价>/
+    _parse_name_star,      # A: <名称>*<数量> [<单价>]
+    _parse_qty_star,       # A2: <数量>*<名称>
+    _parse_qty_x_name,     # A3: <数量>x<名称> [<单价>/个]
+    _parse_name_x_total,   # C2: <名称> X<数量> 价格 <总价>
+    _parse_name_x_qty,     # C: <名称>X<数量> [<单价>]
+    _parse_compact,        # 紧凑: <数量><名称><单价>一个
+    _parse_generic,        # 通用: 名称：xxx 购买数量：N组
+    _parse_qty_unit_total, # J: <数量>[量词]<名称> <总价> (÷数量得单价)
+    _parse_qty_name_price, # I: <数量><名称><单价> (单价≤5)
+    _parse_qty_bare,       # G: <数量>[量词]<名称>
+    _parse_name_num,       # H: <中文名><数量>
+]
+
+
+def _preprocess_lines(text: str) -> list[str]:
+    """预处理原始文本：拆行、逗号分隔、多物品拆分"""
+    text = re.sub(r'(\d+\s*组)\s*(?=区服|名称)', r'\1\n', text)
+    raw_lines = text.strip().splitlines()
+
+    # 逗号 / 加号分隔的多物品拆行
+    # "100处理器+100高级电子+200机械元件" → 3 行
+    # "50个轻型枪械零件，50个中型枪械零件" → 2 行
+    expanded = []
+    for raw_line in raw_lines:
+        stripped = raw_line.strip()
+        if '，' in stripped or ',' in stripped or '+' in stripped:
+            segments = re.split(r'[，,+]\s*', stripped)
+            if len(segments) >= 2 and all(re.search(r'\d', s) for s in segments if s.strip()):
+                expanded.extend(s for s in segments if s.strip())
+                continue
+        expanded.append(raw_line)
+
+    # 单行多物品拆分（2+空格分隔的 name*qty 模式）
+    lines = []
+    for raw_line in expanded:
+        stripped = raw_line.strip()
+        if len(re.findall(r'\*\s*\d+', stripped)) >= 2:
+            segments = re.split(r'\s{2,}', stripped)
+            if len(segments) >= 2 and all(
+                re.search(r'[*xX×]\s*\d+', s) for s in segments
+            ):
+                lines.extend(segments)
+                continue
+        lines.append(raw_line)
+    return lines
+
+
+def _detect_customer(line: str):
+    """检测客户ID（含#号的标识符），返回 customer_id 或 None"""
+    if '#' not in line or '名称' in line or '购买数量' in line:
+        return None
+    m = re.search(r'(\S+#\S+)', line)
+    return m.group(1).strip() if m else None
+
 
 def parse_order_text(text: str) -> dict:
     """
     解析原始订单文本，按客户ID分组返回多个订单。
-    返回 {
-        "orders": [
-            {"customer": "客户ID或空字符串", "items": [{raw_name, quantity}, ...]},
-            ...
-        ]
-    }
-
-    客户ID出现时，它后面的物品属于该客户，直到下一个客户ID出现。
-    没有客户ID的物品归入 "" （匿名）组。
+    返回 {"orders": [{"customer": "客户ID或空", "items": [...]}, ...]}
     """
-    # ── 预处理：拆分多条挤在一行的情况 ──
-    text = re.sub(r'(\d+\s*组)\s*(?=区服|名称)', r'\1\n', text)
-    lines = text.strip().splitlines()
+    lines = _preprocess_lines(text)
 
-    # ── 按客户分组 ──
-    groups = []           # [{customer, items}]
+    groups = []
     current_customer = ""
     current_items    = []
+    collect_mode     = False
 
     for line in lines:
         line = line.strip()
@@ -78,74 +411,57 @@ def parse_order_text(text: str) -> dict:
             continue
 
         # ── 客户ID检测 ──
-        if '#' in line and '名称' not in line and '购买数量' not in line:
-            m = re.search(r'(\S+#\S+)', line)
-            if m:
-                cid = m.group(1).strip()
-                if current_items and not current_customer:
-                    # 物品在前、客户名在后 → 这些物品归这个客户
-                    groups.append({"customer": cid, "items": current_items})
-                    current_items = []
-                    current_customer = ""
-                elif current_items and current_customer:
-                    # 正常：前面有客户有物品，保存后开始新客户
-                    groups.append({"customer": current_customer, "items": current_items})
-                    current_items = []
-                    current_customer = cid
+        cid = _detect_customer(line)
+        if cid:
+            if current_items and not current_customer:
+                groups.append({"customer": cid, "items": current_items})
+                current_items = []
+                current_customer = ""
+            elif current_items and current_customer:
+                groups.append({"customer": current_customer, "items": current_items})
+                current_items = []
+                current_customer = cid
+            else:
+                current_customer = cid
+            continue
+
+        # ── "收" 相关格式：先用原始行尝试格式 E/F（它们的正则含"收"字）──
+        _shou_result = _parse_buy_total(line) or _parse_buy_unit(line)
+        if _shou_result:
+            current_items.append(_shou_result)
+            continue
+
+        # ── "收" 前缀处理：剥离"收"后继续走通用匹配器 ──
+        if re.match(r'^\s*收\s*$', line):
+            collect_mode = True
+            continue
+        m_shou = re.match(r'^\s*收\s*(.+)$', line)
+        if m_shou:
+            collect_mode = True
+            line = m_shou.group(1).strip()
+
+        # ── 按优先级尝试所有格式匹配器 ──
+        matched = False
+        for parser in _LINE_PARSERS:
+            result = parser(line)
+            if result is not None:
+                if isinstance(result, list):
+                    current_items.extend(result)
                 else:
-                    # 还没有物品，客户名在开头
-                    current_customer = cid
-                continue
+                    current_items.append(result)
+                matched = True
+                break
+        if matched:
+            continue
 
-        # ── 金币格式：250k / 80w / 100万 / 500000 (后面可带"金币"/"金"/"coin") ──
-        m_coin = re.search(
-            r'(\d+(?:\.\d+)?)\s*([wW万kK])?\s*(?:金币|金|[Cc]oin[s]?)?',
-            line
-        )
-        if m_coin and '名称' not in line and '购买数量' not in line:
-            num_str, unit = m_coin.group(1), (m_coin.group(2) or '').lower()
-            num = float(num_str)
-            if unit in ('w', '万'):
-                num *= 10000
-            elif unit == 'k':
-                num *= 1000
-            # 只有金额 ≥ 1000 才视为金币需求（防止误匹配普通数字）
-            if num >= 1000 and (unit or '金' in line or 'coin' in line.lower()):
-                current_items.append({
-                    "raw_name": m_coin.group(0).strip(),
-                    "quantity": 1,
-                    "_is_coin": True,
-                    "_coin_amount": int(num),
-                })
-                continue
+        # ── 兜底：collect_mode 下裸物品名按数量=1 ──
+        if collect_mode:
+            current_items.append({"raw_name": line, "quantity": 1})
+            continue
 
-        # ── 通用物品解析 ──
-        for m in re.finditer(
-            r'名称\s*[：:]\s*(.+?)\s*购买数量\s*[：:]\s*(\d+)\s*组',
-            line
-        ):
-            raw_name = m.group(1).strip()
-            quantity = int(m.group(2))
-            if not raw_name or quantity <= 0:
-                continue
-            # 检查 raw_name 是否是金币格式（如 "100 K", "80w", "500000"）
-            m_coin_inner = re.match(r'^(\d+(?:\.\d+)?)\s*([wW万kK])?$', raw_name)
-            if m_coin_inner:
-                num = float(m_coin_inner.group(1))
-                unit = (m_coin_inner.group(2) or '').lower()
-                if unit in ('w', '万'): num *= 10000
-                elif unit == 'k': num *= 1000
-                if num >= 1000:
-                    current_items.append({
-                        "raw_name": raw_name,
-                        "quantity": quantity,
-                        "_is_coin": True,
-                        "_coin_amount": int(num * quantity),
-                    })
-                    continue
-            current_items.append({"raw_name": raw_name, "quantity": quantity})
+        # ── 最终兜底：未识别行，占位符等 AI 兜底 ──
+        current_items.append({"raw_name": line, "quantity": 1, "_unparsed": True})
 
-    # 保存最后一组
     if current_items:
         groups.append({"customer": current_customer, "items": current_items})
 
@@ -153,8 +469,20 @@ def parse_order_text(text: str) -> dict:
 
 
 def _normalize_raw_name(raw: str) -> str:
-    """清理原始名称：去掉方括号前缀、方案标识等"""
+    """清理原始名称：去掉列表标记、方括号前缀、方案标识等"""
     name = raw.strip()
+    # 去掉列表标记前缀：· / - / * / • / ◦ / ‣ 等
+    name = re.sub(r'^[\s·\-\*•◦‣]+', '', name).strip()
+    # 去掉中文量词前缀（个/卷/根/条/块/把/张/片/颗/支/瓶/箱/组/套/份/只）
+    # 仅当量词后跟 ≥2 字符时才剥离，防止 "组件" 被拆
+    name = re.sub(r'^[个卷根条块把张片颗支瓶箱组套份只](?=\S{2})', '', name).strip()
+    # 去掉整体包裹的圆括号：(名称) / （名称）
+    name = re.sub(r'^[（(]\s*(.+?)\s*[）)]$', r'\1', name)
+    # 去掉游戏名前缀："ARC Raiders：" / "Arc Raiders:" / "ARCRaiders：" 等
+    # 这类前缀里的 "ARC" 字面量会污染 bigram 匹配，必须先剥离
+    name = re.sub(
+        r'^\s*ARC[\s_]*Raiders?\s*[：:]\s*', '', name, flags=re.IGNORECASE
+    ).strip()
     # 去掉 [xxx] / 【xxx】 前缀（分类标签，对匹配无用）
     name = re.sub(r'^\s*[\[【][^\]】]*[\]】]\s*', '', name).strip()
     # 【改装武器】风暴（方案 A）→ 风暴A
@@ -201,6 +529,9 @@ def fuzzy_match_items(name_q: str, top: int = 6, force_blueprint: bool = False) 
     q_has_blueprint = force_blueprint or '蓝图' in name_q_lower or 'blueprint' in name_q_lower
     mk_match        = re.search(r'mk\.?\s*(\d+)', name_q_lower)
     q_mk_num        = mk_match.group(1) if mk_match else None
+    # 罗马数字等级（I/II/III/IV）：用于武器 tier 判别
+    # 同时支持全角罗马数字 Ⅰ-Ⅳ 和半角 I-IV
+    q_tier = _extract_roman_tier(name_q)
 
     # ── 搜索别名精确匹配 ──
     q_norm = name_q.replace(" ", "").lower()
@@ -302,6 +633,17 @@ def fuzzy_match_items(name_q: str, top: int = 6, force_blueprint: bool = False) 
                 best = min(best, 30)  # 词级完全没命中，字符级最高30分
         else:
             best = max(best, word_best)
+
+        # 罗马数字等级匹配（武器 tier）
+        # 查询带等级时：相同等级 +5，不同等级 -30；
+        # 查询不带等级但候选带等级时：保持原分（不惩罚，让用户未指定时返回任意）
+        if best > 0 and q_tier is not None:
+            s_tier = _extract_roman_tier(name_zh) or _extract_roman_tier(name_en)
+            if s_tier is not None:
+                if s_tier == q_tier:
+                    best = min(100, best + 5)
+                else:
+                    best = max(1, best - 30)
 
         # 括号加减分
         if best > 0 and q_paren:
@@ -567,9 +909,10 @@ def _match_single_item(raw: str, qty: int) -> dict:
     plan_letter    = plan_match.group(1).upper() if plan_match else ""
 
     # 套餐匹配（改装武器也要尝试，因为可能已经创建了对应套餐）
+    # 用 norm 而不是 raw，避免 "ARC Raiders：" 之类前缀里的字面量污染 bigram 匹配
     bundle_cands = []
     if not is_blueprint and not is_mk:
-        bundle_cands = fuzzy_match_bundles(raw, qty)
+        bundle_cands = fuzzy_match_bundles(norm, qty)
 
     # 改装武器：只接受高分套餐匹配（≥70），低分的是字符碰撞噪声
     if is_modded_plan and plan_letter and bundle_cands:
@@ -577,15 +920,8 @@ def _match_single_item(raw: str, qty: int) -> dict:
         if not good_bundles:
             bundle_cands = []  # 全部丢弃，让 suggest_bundle 接管
 
-    # 物品匹配
+    # 物品匹配（始终用 norm，raw 可能含游戏名前缀干扰打分）
     item_cands = fuzzy_match_items(norm, force_blueprint=is_blueprint)
-    if norm != raw:
-        raw_cands = fuzzy_match_items(raw, force_blueprint=is_blueprint)
-        seen = {c["item_id"] for c in item_cands}
-        for c in raw_cands:
-            if c["item_id"] not in seen:
-                item_cands.append(c)
-        item_cands.sort(key=lambda x: -x["score"])
 
     # 改装武器 + 方案但没匹配到高质量套餐 → 建议创建套餐
     suggest_bundle = None
@@ -629,6 +965,131 @@ def _match_single_item(raw: str, qty: int) -> dict:
     }
 
 
+def _ai_replace_unparsed(parsed: dict) -> None:
+    """
+    扫描所有 group 的 items，找出 _unparsed=True 占位符，调 AI 解析后原地替换。
+    AI 失败/无 key/网络错误时静默跳过，占位符保留（quantity=1）继续走模糊匹配。
+    支持 1 行 → N 个物品（AI 拆分）。
+    """
+    # 收集占位符位置
+    refs = []  # [(group_idx, item_idx)]
+    for gi, group in enumerate(parsed.get("orders", [])):
+        for ii, item in enumerate(group.get("items", [])):
+            if item.get("_unparsed"):
+                refs.append((gi, ii))
+
+    if not refs:
+        return
+
+    try:
+        from services.ai_parse_service import ai_parse_lines
+    except Exception as e:
+        logger.warning(f"加载 ai_parse_service 失败，跳过 AI 兜底解析: {e}")
+        return
+
+    lines_to_parse = [parsed["orders"][gi]["items"][ii]["raw_name"] for gi, ii in refs]
+    logger.info(f"AI 兜底解析：{len(lines_to_parse)} 行未识别文本")
+
+    try:
+        ai_results = ai_parse_lines(lines_to_parse)
+    except Exception as e:
+        logger.warning(f"AI 兜底解析异常: {e}")
+        ai_results = None
+
+    if not ai_results:
+        # AI 不可用：占位符保留（quantity=1），下游模糊匹配仍会试一次
+        return
+
+    # 按 group 聚合替换映射 {group_idx: {item_idx: [new_items]}}
+    group_replacements: dict = {}
+    for (gi, ii), parsed_items in zip(refs, ai_results):
+        group_replacements.setdefault(gi, {})[ii] = parsed_items
+
+    # 应用替换：用列表重建避免下标错位（1 行可能拆成多个物品）
+    for gi, repls in group_replacements.items():
+        old_items = parsed["orders"][gi]["items"]
+        new_items = []
+        for ii, item in enumerate(old_items):
+            if ii in repls:
+                new_for_line = repls[ii]
+                if new_for_line:
+                    new_items.extend(new_for_line)
+                else:
+                    # AI 返回空列表 = 这行不是物品（群名/寒暄等）→ 丢弃
+                    logger.debug(f"AI 判定非物品行，丢弃: {item.get('raw_name', '')[:40]}")
+            else:
+                new_items.append(item)
+        parsed["orders"][gi]["items"] = new_items
+
+
+def _build_category_price_stats(saved_prices: dict, items_db: dict) -> dict:
+    """构建 {rarity|type: {median, prices}} 分类价格统计，用于无历史记录时的兜底参照。"""
+    from collections import defaultdict
+    buckets = defaultdict(list)
+    for item_id, price in saved_prices.items():
+        meta = items_db.get(item_id)
+        if not meta or price <= 0:
+            continue
+        key = f"{meta.get('rarity', '')}|{meta.get('type', '')}"
+        buckets[key].append(price)
+
+    stats = {}
+    for key, prices in buckets.items():
+        if len(prices) < 2:
+            continue
+        prices.sort()
+        mid = len(prices) // 2
+        median = prices[mid] if len(prices) % 2 else (prices[mid - 1] + prices[mid]) / 2
+        stats[key] = {"median": median, "count": len(prices)}
+    return stats
+
+
+def _resolve_ambiguous_price(raw_price: float, qty: int, matched: dict | None,
+                             saved_prices: dict, category_stats: dict,
+                             items_db: dict) -> float:
+    """判别待定价格是单价还是总价，返回单价。
+    策略分三级：
+    1. 有该物品历史单价 → 直接对比
+    2. 无历史但有同品质同类型物品价格 → 用分类中位数对比
+    3. 都没有 → 兜底按总价÷数量"""
+    as_unit  = raw_price
+    as_total = round(raw_price / qty, 6) if qty > 1 else raw_price
+
+    if not matched or not matched.get("item_id"):
+        return as_total
+
+    item_id = matched["item_id"]
+
+    # ── 第 1 级：该物品有历史单价 ──
+    ref_price = saved_prices.get(item_id)
+
+    # ── 第 2 级：同品质同类型的中位数 ──
+    if not ref_price or ref_price <= 0:
+        meta = items_db.get(item_id)
+        if meta:
+            key = f"{meta.get('rarity', '')}|{meta.get('type', '')}"
+            cat = category_stats.get(key)
+            if cat:
+                ref_price = cat["median"]
+                logger.debug(f"价格判别: {item_id} 无历史，用分类 {key} 中位数 {ref_price:.3f}（{cat['count']}个样本）")
+
+    # ── 第 3 级：兜底 ──
+    if not ref_price or ref_price <= 0:
+        logger.debug(f"价格判别: {item_id} 无任何参照，兜底按总价÷{qty}")
+        return as_total
+
+    # 比较哪种解释更接近参照价
+    diff_unit  = abs(as_unit - ref_price)
+    diff_total = abs(as_total - ref_price)
+
+    if diff_unit <= diff_total:
+        logger.debug(f"价格判别: {raw_price} → 单价（参照={ref_price:.3f}, 差={diff_unit:.3f} vs {diff_total:.3f}）")
+        return as_unit
+    else:
+        logger.debug(f"价格判别: {raw_price} → 总价÷{qty}={as_total}（参照={ref_price:.3f}, 差={diff_total:.3f} vs {diff_unit:.3f}）")
+        return as_total
+
+
 def parse_and_match(text: str) -> dict:
     """
     解析订单文本并按客户分组做模糊匹配。
@@ -643,11 +1104,16 @@ def parse_and_match(text: str) -> dict:
     }
     """
     parsed = parse_order_text(text)
+
+    # ── AI 兜底解析：把正则没识别的行交给 Claude 拆成结构化物品 ──
+    # 仅在 API key 已配置且确实有未识别行时调用，发送量 = 未识别行数（极小）
+    _ai_replace_unparsed(parsed)
+
     result_orders = []
 
     # 预加载金币套餐（名称含"金币"的套餐）
     _coin_bundle = None
-    _coin_item_price = 7000  # 伙伴鸭单价
+    _coin_item_price = COIN_UNIT_PRICE
     search_map = load_bundle_search_map()
     for key, bid in search_map.items():
         if '金币' in key:
@@ -655,6 +1121,19 @@ def parse_and_match(text: str) -> dict:
             if b:
                 _coin_bundle = b
                 break
+
+    # 预加载历史价格 + 分类统计，用于判别"待定价格"是单价还是总价
+    _saved_prices = {}
+    try:
+        from database import get_conn
+        with get_conn() as conn:
+            for r in conn.execute("SELECT item_id, sell_price FROM item_prices").fetchall():
+                if r["sell_price"] and r["sell_price"] > 0:
+                    _saved_prices[r["item_id"]] = r["sell_price"]
+    except Exception:
+        pass
+    _items_db = load_item_data()
+    _category_stats = _build_category_price_stats(_saved_prices, _items_db) if _saved_prices else {}
 
     for group in parsed["orders"]:
         matched_items = []
@@ -682,9 +1161,25 @@ def parse_and_match(text: str) -> dict:
                     "_actual_value":  actual_value,
                 })
             else:
-                matched_items.append(
-                    _match_single_item(line["raw_name"], line["quantity"])
-                )
+                item = _match_single_item(line["raw_name"], line["quantity"])
+
+                # 处理待定价格：参照历史单价判别是单价还是总价
+                if line.get("_price_ambiguous") and line.get("_raw_price") is not None:
+                    raw_p = line["_raw_price"]
+                    qty   = line["quantity"]
+                    item["unit_price"] = _resolve_ambiguous_price(
+                        raw_p, qty, item.get("matched"),
+                        _saved_prices, _category_stats, _items_db
+                    )
+                elif line.get("unit_price") is not None:
+                    item["unit_price"] = line["unit_price"]
+
+                # 透传来源标记：AI 解析出的 / 正则未识别的
+                if line.get("_ai_parsed"):
+                    item["_ai_parsed"] = True
+                if line.get("_unparsed"):
+                    item["_unparsed"] = True
+                matched_items.append(item)
         result_orders.append({
             "customer": group["customer"],
             "items":    matched_items,

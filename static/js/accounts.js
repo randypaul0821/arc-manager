@@ -158,9 +158,22 @@ async function syncOne(id) {
 async function syncAll() {
   const btn = document.getElementById('syncAllBtn');
   btn.disabled = true; btn.textContent = '同步中...';
-  await api('/api/accounts/sync-all', { method:'POST' });
+  const res = await api('/api/accounts/sync-all', { method:'POST' });
   btn.disabled = false; btn.textContent = '↻ 全量同步';
-  toast('全量同步完成', 'success');
+  if (res.error) {
+    toast('全量同步失败: ' + res.error, 'error');
+  } else {
+    const r = res.results || {};
+    const total = Object.keys(r).length;
+    const ok = Object.values(r).filter(v => v === 'ok').length;
+    if (total === 0) {
+      toast('没有可同步的账号', 'warning');
+    } else if (ok === total) {
+      toast(`全量同步完成（${total}个账号全部成功）`, 'success');
+    } else {
+      toast(`同步完成：${ok}/${total} 成功`, ok > 0 ? 'warning' : 'error');
+    }
+  }
   loadAccounts();
 }
 
@@ -266,8 +279,10 @@ function _pollAutoTask(accountId, name) {
     const task = (res.tasks || {})[accountId];
     if (!task || task.status === 'ok') {
       clearInterval(_autoLoginPoll); _autoLoginPoll = null;
-      toast(`「${name}」${task ? task.message : 'Cookie 已更新'}`, 'success');
+      toast(`「${name}」${task ? task.message : 'Cookie 已更新'}，正在同步...`, 'success');
       loadAccounts();
+      // Cookie 刷新后主动触发一次同步，然后等待同步完成再刷新 UI
+      api(`/api/accounts/${accountId}/sync`, { method: 'POST' }).then(() => loadAccounts());
       _waitSyncDone(accountId);
     } else if (task.status === 'steam_expired') {
       clearInterval(_autoLoginPoll); _autoLoginPoll = null;

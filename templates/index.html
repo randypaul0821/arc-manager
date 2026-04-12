@@ -30,7 +30,7 @@
     </div>
 
     <div class="nav-group-label">Workspace</div>
-    <div class="nav-item" data-page="inventory" onclick="showPage('inventory')">
+    <div class="nav-item" data-page="inventory" onclick="invShowAllAndOpen()">
       <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7l10-4 10 4v10l-10 4L2 17V7z"/><path d="M12 3v18"/><path d="M2 7l10 4 10-4"/></svg></span>
       <span class="nav-label">库存</span>
       <span class="nav-count" id="alertBadge" style="display:none">!</span>
@@ -136,10 +136,7 @@
 <!-- ── 库存 ── -->
 <div id="page-inventory" class="page" style="overflow:hidden">
 
-  <!-- 账号选择器已移至侧边栏子菜单 -->
-  <div id="inv-row2" style="display:none"></div>
-
-  <!-- 第二栏：筛选条（搜索 + 分类 + 稀有度） -->
+  <!-- 筛选条（搜索 + 分类 + 稀有度） -->
   <div id="inv-row1" style="flex-shrink:0;border-bottom:1px solid var(--border);background:var(--bg1)"></div>
 
   <!-- 第三栏：内容区 -->
@@ -164,40 +161,14 @@
       </table>
     </div>
     <div id="bmShortageSection" style="padding:12px 0">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div style="display:flex;align-items:center;gap:12px">
-          <button class="tag-btn active" id="bmTabShortage" onclick="_bmSwitchListTab('shortage')">补货清单</button>
-          <button class="tag-btn" id="bmTabInstock" onclick="_bmSwitchListTab('instock')">存货分布</button>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <button class="tag-btn" id="bmShortageToggle" onclick="_bmToggleShortageView(this)" style="font-size:11px">隐藏可调货</button>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--border)">
+          <span style="font-size:13px;font-weight:600;color:var(--text2)">物品需求</span>
           <button class="btn small" onclick="_bmExportShortage()" style="border-color:var(--danger);color:var(--danger)">导出缺货</button>
         </div>
-      </div>
-      <div class="card" id="bmShortageCard">
         <table>
-          <thead><tr>
-            <th style="width:48px"></th>
-            <th>物品</th>
-            <th style="width:90px" class="col-num">需要</th>
-            <th style="width:90px" class="col-num">库存</th>
-            <th style="width:120px" class="col-num">缺口</th>
-            <th style="width:80px"></th>
-          </tr></thead>
+          <thead id="bmShortageHead"></thead>
           <tbody id="bmShortageBody"></tbody>
-        </table>
-      </div>
-      <div class="card" id="bmInstockCard" style="display:none">
-        <table>
-          <thead><tr>
-            <th style="width:48px"></th>
-            <th>物品</th>
-            <th style="width:70px" class="col-num">当前库存</th>
-            <th style="width:70px" class="col-num">缺口</th>
-            <th>其他账号库存</th>
-            <th style="width:80px"></th>
-          </tr></thead>
-          <tbody id="bmInstockBody"></tbody>
         </table>
       </div>
     </div>
@@ -270,7 +241,12 @@
           <th style="width:40px"></th>
           <th style="width:160px">物品</th>
           <th style="width:50px" class="col-num">需求</th>
-          <th>各账号库存 / 可合成</th>
+          <th>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span>各账号库存 / 可合成</span>
+              <div id="shortageAccFilter" style="display:flex;gap:3px;flex-wrap:wrap"></div>
+            </div>
+          </th>
           <th style="width:60px" class="col-num">状态</th>
           <th style="width:140px">来源订单</th>
         </tr></thead>

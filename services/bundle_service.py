@@ -330,6 +330,19 @@ def _generate_combos(phase_bundles: list, base_zh: str, base_en: str, source: st
     return combo_count
 
 
+def _delete_bundles_by_source(source: str) -> int:
+    """删除指定 source 的所有套餐及关联的监控规则，返回删除数量"""
+    with get_conn() as conn:
+        old = conn.execute("SELECT id FROM bundles WHERE source=?", (source,)).fetchall()
+        old_ids = [r["id"] for r in old]
+        if old_ids:
+            ph = ",".join("?" * len(old_ids))
+            conn.execute(f"DELETE FROM account_watch_rules WHERE rule_type='bundle' AND target_id IN ({ph})", old_ids)
+            conn.execute(f"DELETE FROM bundle_alerts WHERE bundle_id IN ({ph})", old_ids)
+            conn.execute("DELETE FROM bundles WHERE source=?", (source,))
+        return len(old_ids)
+
+
 def generate_hideout_bundles() -> dict:
     """从 hideout JSON 生成系统套餐，先删除旧的 hideout 套餐再全量重建"""
     hideout_dir = os.path.join(DATA_DIR, "hideout")
@@ -337,25 +350,14 @@ def generate_hideout_bundles() -> dict:
         logger.error(f"hideout 目录不存在: {hideout_dir}")
         return {"created": 0, "deleted": 0, "skipped": 0, "error": "hideout 目录不存在"}
 
-    # 读取所有 hideout 数据
     stations = []
     for fname in sorted(os.listdir(hideout_dir)):
         if not fname.endswith(".json"):
             continue
-        fpath = os.path.join(hideout_dir, fname)
-        with open(fpath, encoding="utf-8") as f:
+        with open(os.path.join(hideout_dir, fname), encoding="utf-8") as f:
             stations.append(json.load(f))
 
-    # 删除旧的 hideout 套餐及关联的监控规则
-    with get_conn() as conn:
-        old = conn.execute("SELECT id FROM bundles WHERE source='hideout'").fetchall()
-        old_ids = [r["id"] for r in old]
-        if old_ids:
-            ph = ",".join("?" * len(old_ids))
-            conn.execute(f"DELETE FROM account_watch_rules WHERE rule_type='bundle' AND target_id IN ({ph})", old_ids)
-            conn.execute(f"DELETE FROM bundle_alerts WHERE bundle_id IN ({ph})", old_ids)
-            conn.execute("DELETE FROM bundles WHERE source='hideout'")
-        deleted = len(old_ids)
+    deleted = _delete_bundles_by_source("hideout")
 
     created = 0
     skipped = 0
@@ -435,16 +437,7 @@ def generate_project_bundles() -> dict:
     with open(proj_file, encoding="utf-8") as f:
         projects = json.load(f)
 
-    # 删除旧的 projects 套餐及关联的监控规则
-    with get_conn() as conn:
-        old = conn.execute("SELECT id FROM bundles WHERE source='projects'").fetchall()
-        old_ids = [r["id"] for r in old]
-        if old_ids:
-            ph = ",".join("?" * len(old_ids))
-            conn.execute(f"DELETE FROM account_watch_rules WHERE rule_type='bundle' AND target_id IN ({ph})", old_ids)
-            conn.execute(f"DELETE FROM bundle_alerts WHERE bundle_id IN ({ph})", old_ids)
-            conn.execute("DELETE FROM bundles WHERE source='projects'")
-        deleted = len(old)
+    deleted = _delete_bundles_by_source("projects")
 
     created = 0
     skipped = 0

@@ -1,8 +1,8 @@
 // ══════════ 套餐 ══════════
 async function loadBundles() {
   const [bundles, sources] = await Promise.all([
-    api('/api/bundles'),
-    api('/api/bundles/sources'),
+    api('/api/bundles').catch(() => []),
+    api('/api/bundles/sources').catch(() => []),
   ]);
   state.bundles.all     = bundles;
   state.bundles.sources = sources;

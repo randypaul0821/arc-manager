@@ -3,7 +3,6 @@
 // ══════════ 物品需求（合并版：补货 + 存货 + 合成） ══════════
 
 const _shortageGathered = new Set();
-const _orderIdToIdx     = {};
 let   _shortageData     = [];
 let   _bundleItemsMap   = {};
 let   _shortageCraftCache = {};  // { item_id: { accounts: [{account_id, craftable, stock}] } }
@@ -11,13 +10,16 @@ let   _shortageCraftCache = {};  // { item_id: { accounts: [{account_id, craftab
 // 拿货选择：{ item_id: Set<account_id> } — 记录每个物品从哪些账号拿货
 const _shortagePickSources = {};
 
+// 账号显隐：Set<account_id> — 空集 = 全部显示；有值时只显示集合中的账号
+const _shortageHiddenAccs = new Set();
+
 // ── 数据加载 ──
 
 async function loadShortage() {
   // 确保账号颜色映射已初始化（用户可能未先访问库存页）
   if (!inv.colorIdx || !Object.keys(inv.colorIdx).length) {
     const accounts = await api('/api/accounts').catch(() => []);
-    (accounts || []).filter(a => a.active).forEach((a, i) => { inv.colorIdx[a.id] = i; });
+    ensureColorIndex((accounts || []).filter(a => a.active));
   }
 
   const raw = await api('/api/orders/shortage');
@@ -33,20 +35,31 @@ async function loadShortage() {
   }
 
   renderShortage();
-  _loadCraftDataForShortage();
+  await _loadCraftDataForShortage();
 }
 
-// 异步加载合成数据
+// 加载合成数据（并行请求，完成后统一刷新一次）
 async function _loadCraftDataForShortage() {
   const filtered = _filterBySelectedOrders(_shortageData);
-  for (const item of filtered) {
-    if (_shortageCraftCache[item.item_id]) continue;
-    const data = await api(`/api/craft/craftable?item_id=${item.item_id}`);
-    if (data && data.accounts) {
-      _shortageCraftCache[item.item_id] = data;
-      renderShortage(); // 每加载一个就刷新
+  const toLoad = filtered.filter(item => !_shortageCraftCache[item.item_id]);
+  if (!toLoad.length) return;
+
+  const results = await Promise.all(
+    toLoad.map(item =>
+      api(`/api/craft/craftable?item_id=${item.item_id}`)
+        .then(data => ({ id: item.item_id, data }))
+        .catch(() => null)
+    )
+  );
+
+  let updated = false;
+  for (const r of results) {
+    if (r && r.data && r.data.accounts) {
+      _shortageCraftCache[r.id] = r.data;
+      updated = true;
     }
   }
+  if (updated) renderShortage();
 }
 
 // ── 集齐 ──
@@ -175,7 +188,42 @@ function _calcStockForItem(item, useAllAccounts) {
 
 // ── 渲染 ──
 
+function _renderShortageAccFilter() {
+  const el = document.getElementById('shortageAccFilter');
+  if (!el) return;
+  // 收集所有出现过的账号
+  const accMap = {};
+  for (const item of _shortageData) {
+    for (const a of (item.account_stocks || [])) {
+      if (!accMap[a.account_id]) accMap[a.account_id] = a.account_name;
+    }
+  }
+  const accList = Object.entries(accMap);
+  if (!accList.length) { el.innerHTML = ''; return; }
+  el.innerHTML = accList.map(([accId, accName]) => {
+    const id = Number(accId);
+    const hidden = _shortageHiddenAccs.has(id);
+    const ci = (inv.colorIdx && inv.colorIdx[id] !== undefined) ? inv.colorIdx[id] : 0;
+    const c = INV_PALETTE[ci % INV_PALETTE.length];
+    const style = hidden
+      ? `border-color:var(--border);color:var(--text3);background:transparent;opacity:.55`
+      : `border-color:${c.border};color:${c.text};background:${c.bg}`;
+    return `<button type="button" onclick="toggleShortageAcc(${id})" title="点击切换显示/隐藏"
+      style="font-size:11px;padding:2px 8px;border-radius:10px;border:1px solid;${style};cursor:pointer;font-weight:500">
+      ${accName}
+    </button>`;
+  }).join('');
+}
+
+function toggleShortageAcc(accId) {
+  if (_shortageHiddenAccs.has(accId)) _shortageHiddenAccs.delete(accId);
+  else _shortageHiddenAccs.add(accId);
+  _renderShortageAccFilter();
+  renderShortage();
+}
+
 function renderShortage() {
+  _renderShortageAccFilter();
   const items = _filterBySelectedOrders(_shortageData);
   if (!items.length) {
     document.getElementById('shortageBody').innerHTML =
@@ -220,9 +268,12 @@ function renderShortage() {
       statusHtml = `<span style="color:var(--danger);font-weight:600">缺 ${gap}</span>`;
     }
 
-    // 各账号库存+合成标签（带颜色）
-    const accStocks = item.account_stocks || [];
+    // 各账号库存+合成标签
+    // 默认中性色；只有当「该账号库存 + 可合成 ≥ 整单需求」时，才给该标签上账号专属色
+    // 按表头的账号筛选过滤掉被隐藏的账号
+    const accStocks = (item.account_stocks || []).filter(a => !_shortageHiddenAccs.has(a.account_id));
     const craftData = _shortageCraftCache[item.item_id];
+    const needed = item.total_needed || 0;
     const accHtml = accStocks.map(a => {
       const isPicked = picked.has(a.account_id);
       let craftQty = 0;
@@ -230,14 +281,28 @@ function renderShortage() {
         const ac = craftData.accounts.find(x => x.account_id === a.account_id);
         if (ac) craftQty = ac.craftable || 0;
       }
-      // 账号颜色（复用库存页调色板）
-      const ci = (inv.colorIdx && inv.colorIdx[a.account_id] !== undefined) ? inv.colorIdx[a.account_id] : 0;
-      const c = INV_PALETTE[ci % INV_PALETTE.length];
+      const accTotal = (a.quantity || 0) + craftQty;
+      const meetsNeed = needed > 0 && accTotal >= needed;
+
+      let borderColor, textColor, bgColor;
+      if (meetsNeed) {
+        // 满足整单需求 → 用账号专属调色板
+        const ci = (inv.colorIdx && inv.colorIdx[a.account_id] !== undefined) ? inv.colorIdx[a.account_id] : 0;
+        const c = INV_PALETTE[ci % INV_PALETTE.length];
+        borderColor = c.border;
+        textColor   = c.text;
+        bgColor     = isPicked ? c.bg : '';
+      } else {
+        // 不满足 → 中性色，与订单列表风格一致
+        borderColor = 'var(--border)';
+        textColor   = 'var(--text2)';
+        bgColor     = isPicked ? 'var(--bg3)' : '';
+      }
 
       return `<span class="shortage-acc-tag${isPicked ? ' picked' : ''}" id="stag_${item.item_id}_${a.account_id}"
         onclick="togglePickSource('${item.item_id}',${a.account_id})"
-        style="border-color:${c.border};color:${c.text};${isPicked ? `background:${c.bg}` : ''}">
-        <span style="color:${c.text};font-weight:500">${a.account_name}</span>
+        style="border-color:${borderColor};color:${textColor};${bgColor ? `background:${bgColor}` : ''}">
+        <span style="color:${textColor};font-weight:500">${a.account_name}</span>
         <span style="font-weight:700;color:var(--text1)">×${a.quantity}</span>
         ${craftQty > 0 ? `<span style="color:var(--accent);font-weight:700">+${craftQty}</span>` : ''}
       </span>`;
@@ -245,9 +310,7 @@ function renderShortage() {
 
     // 来源订单（序号 + 客户名）
     const orderHtml = (item.orders || []).map(o => {
-      const idx = _orderIdToIdx[o.order_id];
-      const idxStr = idx !== undefined ? idx : o.order_id;
-      const label = o.customer_name ? `#${idxStr} ${o.customer_name}` : `#${idxStr}`;
+      const label = o.customer_name ? `#${o.order_id} ${o.customer_name}` : `#${o.order_id}`;
       return `<span style="font-size:12px;color:var(--text2);margin-right:6px">${label}</span>`;
     }).join('');
 
@@ -280,9 +343,8 @@ function exportShortageText() {
     for (const o of (item.orders || [])) {
       if (typeof _selectedOrders !== 'undefined' && _selectedOrders.size && !_selectedOrders.has(o.order_id)) continue;
       const key = o.order_id;
-      const idx = _orderIdToIdx[o.order_id];
       if (!orderMap[key]) orderMap[key] = {
-        customer: o.customer_name ? `${o.customer_name} #${idx || o.order_id}` : `#${idx || o.order_id}`,
+        customer: o.customer_name ? `${o.customer_name} #${o.order_id}` : `#${o.order_id}`,
         items: []
       };
       if (!orderMap[key].items.find(x => x.item_id === item.item_id)) {

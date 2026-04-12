@@ -187,10 +187,16 @@ def sync_accounts(account_ids: list[int]) -> dict:
     return results
 
 
-def sync_all_active() -> dict:
-    logger.info("[sync_all] 同步所有激活账号（跳过暂停）")
+def sync_all_active(force: bool = False) -> dict:
+    """同步所有激活账号。force=True 时忽略 sync_paused（手动全量同步用）"""
+    if force:
+        logger.info("[sync_all] 强制同步所有激活账号（忽略暂停）")
+        sql = "SELECT id FROM accounts WHERE active=1"
+    else:
+        logger.info("[sync_all] 同步所有激活账号（跳过暂停）")
+        sql = "SELECT id FROM accounts WHERE active=1 AND sync_paused=0"
     with get_conn() as conn:
-        accounts = conn.execute("SELECT id FROM accounts WHERE active=1 AND sync_paused=0").fetchall()
+        accounts = conn.execute(sql).fetchall()
         ids = [r["id"] for r in accounts]
     logger.info(f"[sync_all] 待同步: {len(ids)} 个")
     return sync_accounts(ids) if ids else {}
@@ -200,23 +206,30 @@ def sync_all_active() -> dict:
 
 _scheduler_thread: threading.Thread | None = None
 _scheduler_running = False
+_scheduler_lock = threading.Lock()
+
+# 定时任务间隔常量（基于 SCHEDULER_INTERVAL_SECONDS 的倍数）
+_CLEANUP_EVERY = 12    # ~1小时执行一次订单清理
+_BACKUP_EVERY  = 288   # ~24小时执行一次数据库备份
 
 
 def start_scheduler():
     global _scheduler_thread, _scheduler_running
-    if _scheduler_running:
-        logger.warning("定时同步已在运行，跳过重复启动")
-        return
-    _scheduler_running = True
-    _scheduler_thread = threading.Thread(target=_scheduler_loop, daemon=True)
-    _scheduler_thread.start()
+    with _scheduler_lock:
+        if _scheduler_running:
+            logger.warning("定时同步已在运行，跳过重复启动")
+            return
+        _scheduler_running = True
+        _scheduler_thread = threading.Thread(target=_scheduler_loop, daemon=True)
+        _scheduler_thread.start()
     logger.info(f"定时同步已启动（每 {SCHEDULER_INTERVAL_SECONDS}s 检查，{SYNC_INTERVAL_MINUTES}min 未更新则触发）")
     print(f"  定时同步已启动（每{SCHEDULER_INTERVAL_SECONDS//60}分钟检查，{SYNC_INTERVAL_MINUTES}分钟未更新则触发）")
 
 
 def stop_scheduler():
     global _scheduler_running
-    _scheduler_running = False
+    with _scheduler_lock:
+        _scheduler_running = False
     logger.info("定时同步已停止")
 
 
@@ -227,18 +240,17 @@ def _scheduler_loop():
     while _scheduler_running:
         try:
             _check_and_sync()
-            # 每 12 次检查（约1小时）执行一次订单清理
             _cleanup_counter += 1
-            if _cleanup_counter >= 12:
+            if _cleanup_counter >= _CLEANUP_EVERY:
                 _cleanup_counter = 0
                 try:
                     from services.order_service import cleanup_old_orders
-                    cleanup_old_orders(days=7)
+                    from config import ORDER_CLEANUP_DAYS
+                    cleanup_old_orders(days=ORDER_CLEANUP_DAYS)
                 except Exception as e:
                     logger.error("[scheduler] 订单清理出错", exc_info=True)
-            # 每 288 次检查（约24小时）执行一次数据库备份
             _backup_counter += 1
-            if _backup_counter >= 288:
+            if _backup_counter >= _BACKUP_EVERY:
                 _backup_counter = 0
                 _backup_database()
         except Exception as e:
@@ -250,15 +262,19 @@ def _scheduler_loop():
 def _backup_database():
     """使用 SQLite 内置 backup API 备份数据库（原子、不锁表）"""
     backup_path = DB_PATH + ".bak"
+    src = dst = None
     try:
         src = sqlite3.connect(DB_PATH)
         dst = sqlite3.connect(backup_path)
         src.backup(dst)
-        dst.close()
-        src.close()
         logger.info(f"[scheduler] 数据库已备份到 {backup_path}")
     except Exception:
         logger.error("[scheduler] 数据库备份失败", exc_info=True)
+    finally:
+        if dst:
+            dst.close()
+        if src:
+            src.close()
 
 
 def _check_and_sync():

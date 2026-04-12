@@ -8,10 +8,15 @@ from services.order_service import (
     get_orders, get_order,
     create_order, update_order, delete_order,
     complete_order, cancel_order,
-    get_shortage_list, get_instock_list, get_item_prices, get_stats,
+    get_item_prices,
     update_order_item_ready, update_order_item_price,
     replace_order_item, rematch_order_item,
-    export_daily_report, get_restock_advice
+)
+from services.shortage_service import (
+    get_shortage_list, get_instock_list, get_restock_advice,
+)
+from services.order_report_service import (
+    get_stats, export_daily_report,
 )
 
 logger = logging.getLogger("routes.orders")
@@ -75,10 +80,10 @@ def api_complete_order(oid):
     d = request.json or {}
     sync_ids = d.get("sync_account_ids", [])
     logger.info(f"POST /api/orders/{oid}/complete sync_accounts={sync_ids}")
-    ok, err = complete_order(oid, sync_account_ids=sync_ids)
+    ok, result = complete_order(oid, sync_account_ids=sync_ids)
     if not ok:
-        return jsonify({"error": err}), 400
-    return jsonify({"ok": True})
+        return jsonify({"error": result}), 400
+    return jsonify({"ok": True, "synced_accounts": result})
 
 
 @orders_bp.route("/api/orders/<int:oid>/cancel", methods=["POST"])

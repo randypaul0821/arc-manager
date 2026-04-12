@@ -3,9 +3,9 @@ let _dashChartResizeBound = false;
 
 async function loadDashboard() {
   const [accounts, inventory, orders] = await Promise.all([
-    api('/api/accounts'),
-    api('/api/inventory'),
-    api('/api/orders'),
+    api('/api/accounts').catch(() => []),
+    api('/api/inventory').catch(() => []),
+    api('/api/orders').catch(() => []),
   ]);
 
   document.getElementById('stat-accounts').textContent = accounts.filter(a => a.active).length;

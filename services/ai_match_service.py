@@ -186,6 +186,43 @@ def _has_chinese(s: str) -> bool:
     return any('\u4e00' <= c <= '\u9fff' for c in s)
 
 
+def _has_char_overlap(raw_name: str, name_zh: str, name_en: str) -> bool:
+    """
+    检查 raw_name 是否和匹配项名称有字符级重叠。
+    用于侦测 AI 幻觉：如 "颂歌" → "Arpeggio" 这种零重叠的虚假匹配。
+
+    - 中文 raw_name：至少有 1 个汉字出现在 name_zh / name_en 里
+    - 英文 raw_name：至少有 1 个 ≥3 字母的单词出现在 name_zh+name_en 里
+    - 完全无重叠 → False（视为 AI 幻觉）
+    """
+    import re as _re
+    # 先剥常见前缀
+    raw = raw_name.strip()
+    raw = _re.sub(r'^\s*ARC[\s_]*Raiders?\s*[：:]\s*', '', raw, flags=_re.IGNORECASE)
+    raw = _re.sub(r'^\s*[\[【][^\]】]*[\]】]\s*', '', raw)
+    raw_lower = raw.lower()
+    if not raw_lower:
+        return False
+
+    pool = (name_zh or "") + " " + (name_en or "")
+    pool_lower = pool.lower()
+
+    # 目标项完全没有中文译名（name_zh 全是英文/空）→ 中文 raw 没法字符比对
+    # 这种情况给 AI benefit of the doubt，返回 True 不强制核对
+    name_zh_has_chinese = any('\u4e00' <= c <= '\u9fff' for c in (name_zh or ""))
+
+    # 中文路径：单字命中
+    chinese_chars = [c for c in raw if '\u4e00' <= c <= '\u9fff']
+    if chinese_chars:
+        if not name_zh_has_chinese:
+            return True  # 目标无中文名，跳过中文比对
+        return any(c in pool for c in chinese_chars)
+
+    # 英文路径：≥3 字母单词命中
+    words = _re.findall(r'[a-z]{3,}', raw_lower)
+    return any(w in pool_lower for w in words) if words else False
+
+
 def apply_ai_matches(result: dict, threshold: int = 80) -> dict:
     """
     对 parse_and_match() 的结果做 AI 增强：
@@ -247,9 +284,24 @@ def apply_ai_matches(result: dict, threshold: int = 80) -> dict:
             item_ref["_needs_manual"] = True
             continue
 
-        confidence_score = {"high": 98, "medium": 85, "low": 70}.get(
-            ai_match["confidence"], 70
-        )
+        confidence = ai_match.get("confidence", "low")
+        confidence_score = {"high": 98, "medium": 85, "low": 70}.get(confidence, 70)
+        # 非 high 自信的 AI 匹配一律要求人工核对：AI 在中文别名上容易幻觉
+        # （例："颂歌" 被 AI 猜成 "Arpeggio/三连奏"）
+        low_confidence = confidence != "high"
+
+        # 第二道闸：raw_name 和匹配项名称必须有字符/词重叠
+        # 阻止 "颂歌 → Arpeggio" 这种 AI 报 high 自信的纯幻觉
+        target_id = ai_match.get("match_id")
+        if ai_match["match_type"] == "item" and target_id in items_db:
+            tgt_zh = names_zh.get(target_id, "")
+            tgt_en = names_en.get(target_id, "")
+            if not _has_char_overlap(item_ref["raw_name"], tgt_zh, tgt_en):
+                logger.info(
+                    f"AI 幻觉拦截: '{item_ref['raw_name']}' → {target_id} "
+                    f"({tgt_zh}/{tgt_en}) 字符零重叠，强制核对"
+                )
+                low_confidence = True
 
         if ai_match["match_type"] == "item":
             item_id = ai_match["match_id"]
@@ -273,6 +325,8 @@ def apply_ai_matches(result: dict, threshold: int = 80) -> dict:
                 candidates.insert(0, old_matched)
             item_ref["matched"] = new_matched
             item_ref["candidates"] = candidates
+            if low_confidence:
+                item_ref["_needs_manual"] = True
 
         elif ai_match["match_type"] == "bundle":
             from services.match_service import _bundle_to_candidate
@@ -289,5 +343,7 @@ def apply_ai_matches(result: dict, threshold: int = 80) -> dict:
                 candidates.insert(0, old_matched)
             item_ref["matched"] = new_matched
             item_ref["candidates"] = candidates
+            if low_confidence:
+                item_ref["_needs_manual"] = True
 
     return result

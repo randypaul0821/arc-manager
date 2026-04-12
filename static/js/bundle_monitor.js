@@ -4,27 +4,8 @@
 //  bundle_monitor.js — 重点关注页（物品关注 + 套餐关注）
 // ══════════════════════════════════════════════════════════════
 
-const INV_TYPE_LABELS_BM = {
-  'Assault Rifle':'突击步枪','Battle Rifle':'战斗步枪','SMG':'冲锋枪',
-  'LMG':'轻机枪','Shotgun':'霰弹枪','Sniper Rifle':'狙击步枪',
-  'Pistol':'手枪','Hand Cannon':'手炮','Shield':'护盾','Augment':'强化模组',
-  'Modification':'武器配件','Basic Material':'基础材料','Material':'材料',
-  'Refined Material':'精炼材料','Topside Material':'地表材料',
-  'Nature':'自然材料','Recyclable':'可回收品','Ammunition':'弹药',
-  'Quick Use':'快速使用品','Key':'钥匙','Blueprint':'蓝图',
-  'Trinket':'小物件','Special':'特殊物品','Outfit':'服装',
-  'Cosmetic':'装饰品','BackpackCharm':'背包挂饰','Misc':'杂项',
-};
-
-const BM_TYPE_GROUPS = [
-  { label:'武器',   types:['Assault Rifle','Battle Rifle','SMG','LMG','Shotgun','Sniper Rifle','Pistol','Hand Cannon'] },
-  { label:'装备',   types:['Shield','Augment','Modification'] },
-  { label:'材料',   types:['Basic Material','Material','Refined Material','Topside Material','Nature','Recyclable'] },
-  { label:'消耗品', types:['Ammunition','Quick Use'] },
-  { label:'其他',   types:['Key','Blueprint','Trinket','Special','Outfit','Cosmetic','BackpackCharm','Misc'] },
-];
-
-const BM_RARITY_ORDER = { Legendary:0, Epic:1, Rare:2, Uncommon:3, Common:4, '':9 };
+// INV_TYPE_LABELS, INV_TYPE_GROUPS, INV_RARITIES, INV_RARITY_ORDER, INV_PALETTE
+// 已移至 common.js 统一定义
 
 const bm = {
   accounts:[], bundles:[], inventory:[], gameItems:[],
@@ -37,11 +18,13 @@ const bm = {
 
 async function loadBundleMonitor() {
   const [accounts, bundles, inventory, gameItems] = await Promise.all([
-    api('/api/accounts'), api('/api/bundles'), api('/api/inventory'), api('/api/items').catch(() => []),
+    api('/api/accounts').catch(() => []), api('/api/bundles').catch(() => []),
+    api('/api/inventory').catch(() => []), api('/api/items').catch(() => []),
   ]);
   bm.accounts = (accounts||[]).filter(a => a.active);
   bm.bundles = bundles||[]; bm.inventory = inventory||[]; bm.gameItems = gameItems||[];
   bm.rules = {}; bm.gathered = new Set(); // Set<"accId_itemId">
+  ensureColorIndex(bm.accounts);
   await Promise.all(bm.accounts.map(async a => {
     bm.rules[a.id] = await api('/api/watch/rules/' + a.id).catch(() => []) || [];
   }));
@@ -136,7 +119,6 @@ function _bmToggleOverviewAcc(id, checked) {
 
   _bmRenderOverview();
   _bmLoadShortage();
-  if (document.getElementById('bmInstockCard')?.style.display !== 'none') _bmLoadInstock();
 }
 function _bmToggleOverviewAll(checked) {
   // 全选不受多选开关影响
@@ -146,7 +128,6 @@ function _bmToggleOverviewAll(checked) {
 
   _bmRenderOverview();
   _bmLoadShortage();
-  if (document.getElementById('bmInstockCard')?.style.display !== 'none') _bmLoadInstock();
 }
 function _bmToggleMultiSelect(checked) {
   bm.multiSelect = checked;
@@ -158,8 +139,7 @@ function _bmToggleMultiSelect(checked) {
     bm.selectedAccounts.add(first);
     _bmRenderOverview();
     _bmLoadShortage();
-    if (document.getElementById('bmInstockCard')?.style.display !== 'none') _bmLoadInstock();
-  }
+    }
 }
 function _bmUpdateCheckAll() {
   const el = document.getElementById('bmOverviewCheckAll');
@@ -174,22 +154,8 @@ function _bmUpdateCheckAll() {
 
 // ═══ 补货清单 + 存货分布 ═══
 
-let _bmShortageData=[], _bmInstockData=[], _bmHideTransferable=false;
+let _bmShortageData=[];
 
-function _bmSwitchListTab(tab) {
-  document.getElementById('bmTabShortage').classList.toggle('active', tab==='shortage');
-  document.getElementById('bmTabInstock').classList.toggle('active', tab==='instock');
-  document.getElementById('bmShortageCard').style.display = tab==='shortage'?'':'none';
-  document.getElementById('bmInstockCard').style.display = tab==='instock'?'':'none';
-  document.getElementById('bmShortageToggle').style.display = tab==='shortage'?'':'none';
-  if (tab==='instock') _bmLoadInstock();
-}
-function _bmToggleShortageView(btn) {
-  _bmHideTransferable = !_bmHideTransferable;
-  btn.textContent = _bmHideTransferable ? '隐藏可调货 ✓' : '隐藏可调货';
-  btn.classList.toggle('active', _bmHideTransferable);
-  _bmRenderShortage();
-}
 
 function _bmLoadShortage() {
   if (!bm.stockAccounts.length) {
@@ -231,9 +197,10 @@ function _bmLoadShortage() {
     }
   }
 
+  // 按物品汇总所有选中账号的需求
+  const itemMap = {}; // { item_id: { ..., accounts: [{acc_id, acc_name, needed, stock, shortage}] } }
   for (const acc of selAccs) {
     const rules = bm.rules[acc.id]||[];
-    // 汇总该账号的需求
     const demand = {};
     const add = (id,qty,src) => { if(!demand[id]) demand[id]={needed:0,sources:[]}; demand[id].needed+=qty; demand[id].sources.push(src); };
     for (const r of rules) {
@@ -245,193 +212,133 @@ function _bmLoadShortage() {
       if (r.rule_type==='item' && r.threshold>0) add(r.target_id, r.threshold, `★关注 ≥${r.threshold}`);
     }
     for (const [id,d] of Object.entries(demand)) {
-      const inv2=invMap[id], meta=nameMap[id]||{};
-      const accQty = _bmGetAccQty(id, acc.id);
-      const shortage = Math.max(0, d.needed - accQty);
-      // 其他账号（不含自己）的库存
-      const otherStocks = inv2 ? (inv2.accounts||[]).filter(a => a.account_id !== acc.id && a.quantity > 0)
-        .map(a => ({account_id:a.account_id, account_name:a.account_name, quantity:a.quantity})) : [];
-      const otherTotal = otherStocks.reduce((s,a) => s+a.quantity, 0);
-      // 调货等级：none=其他账号完全无库存, multi=有库存但无单账号能补齐, single=存在单账号可独立补齐
-      let transferLevel = 'none';
-      if (shortage > 0 && otherStocks.length > 0) {
-        transferLevel = otherStocks.some(a => a.quantity >= shortage) ? 'single' : 'multi';
+      const meta = nameMap[id]||{};
+      const stock = _bmGetAccQty(id, acc.id);
+      const shortage = Math.max(0, d.needed - stock);
+      if (!itemMap[id]) {
+        itemMap[id] = { item_id:id, name_zh:meta.name_zh||id, name_en:meta.name_en||'', sources:[], accounts:[] };
       }
-      // 其他也关注此物品的账号
-      const alsoWatched = (itemWatchMap[id]||[]).filter(w => w.acc_id !== acc.id).map(w => w.acc_name);
-
-      _bmShortageData.push({
-        acc_id: acc.id, acc_name: acc.name,
-        item_id:id, name_zh:meta.name_zh||id, name_en:meta.name_en||'',
-        total_needed:d.needed, current_stock:accQty, shortage,
-        other_stocks:otherStocks, other_total:otherTotal,
-        transfer_level:transferLevel, also_watched:alsoWatched,
-        sources:d.sources,
-      });
+      itemMap[id].accounts.push({ acc_id:acc.id, acc_name:acc.name, needed:d.needed, stock, shortage });
+      for (const s of d.sources) { if (!itemMap[id].sources.includes(s)) itemMap[id].sources.push(s); }
     }
   }
+  // 补充未被关注但有库存的账号列数据
+  for (const [id, item] of Object.entries(itemMap)) {
+    const inv2 = invMap[id];
+    if (!inv2) continue;
+    for (const acc of selAccs) {
+      if (item.accounts.some(a => a.acc_id === acc.id)) continue;
+      const stock = _bmGetAccQty(id, acc.id);
+      item.accounts.push({ acc_id:acc.id, acc_name:acc.name, needed:0, stock, shortage:0 });
+    }
+  }
+  _bmShortageData = Object.values(itemMap);
   _bmRenderShortage();
 }
 
-// 给每个账号分配固定颜色
-const _bmAccColors = [
-  {bg:'rgba(99,102,241,.12)', bd:'rgba(99,102,241,.3)', fg:'#6366f1'},
-  {bg:'rgba(236,72,153,.12)', bd:'rgba(236,72,153,.3)', fg:'#ec4899'},
-  {bg:'rgba(245,158,11,.12)', bd:'rgba(245,158,11,.3)', fg:'#f59e0b'},
-  {bg:'rgba(16,185,129,.12)', bd:'rgba(16,185,129,.3)', fg:'#10b981'},
-  {bg:'rgba(59,130,246,.12)', bd:'rgba(59,130,246,.3)', fg:'#3b82f6'},
-  {bg:'rgba(168,85,247,.12)', bd:'rgba(168,85,247,.3)', fg:'#a855f7'},
-  {bg:'rgba(239,68,68,.12)',  bd:'rgba(239,68,68,.3)',  fg:'#ef4444'},
-  {bg:'rgba(20,184,166,.12)', bd:'rgba(20,184,166,.3)', fg:'#14b8a6'},
-];
-const _bmAccColorMap = {};
-let _bmAccColorIdx = 0;
-function _bmGetAccColor(accountId) {
-  if (!_bmAccColorMap[accountId]) {
-    _bmAccColorMap[accountId] = _bmAccColors[_bmAccColorIdx % _bmAccColors.length];
-    _bmAccColorIdx++;
-  }
-  return _bmAccColorMap[accountId];
+// 获取账号的 INV_PALETTE 颜色（与库存页一致）
+function _bmAccColor(accId) {
+  const ci = (inv.colorIdx && inv.colorIdx[accId] !== undefined) ? inv.colorIdx[accId] : 0;
+  return INV_PALETTE[ci % INV_PALETTE.length];
+}
+
+// 获取当前选中账号的有序列表（用于动态表头）
+function _bmSelectedAccList() {
+  return bm.accounts.filter(a => bm.selectedAccounts.has(a.id));
 }
 
 function _bmRenderShortage() {
-  const multiAcc = bm.selectedAccounts.size > 1;
-  // 过滤：只展示有缺口的或已集齐的
-  let show = _bmShortageData.filter(i => i.shortage > 0 || bm.gathered.has(i.acc_id+'_'+i.item_id));
-  // 隐藏可调货
-  if (_bmHideTransferable) {
-    show = show.filter(i => bm.gathered.has(i.acc_id+'_'+i.item_id) || i.transfer_level === 'none');
-  }
-  // 排序：先按账号分组（按选中顺序），组内未集齐在前，再按调货等级
-  const selOrder = [...bm.selectedAccounts];
-  const tOrd = {none:0, multi:1, single:2};
+  // 固定表头（和订单页物品需求表一致）
+  document.getElementById('bmShortageHead').innerHTML = `<tr>
+    <th style="width:40px"></th>
+    <th style="width:160px">物品</th>
+    <th style="width:50px" class="col-num">需求</th>
+    <th>各账号库存 / 可合成</th>
+    <th style="width:60px" class="col-num">状态</th>
+    <th style="width:60px"></th>
+  </tr>`;
+
+  // 过滤：只展示有任一账号缺口的或已集齐的
+  let show = _bmShortageData.filter(item =>
+    item.accounts.some(a => a.shortage > 0) || item.accounts.some(a => bm.gathered.has(a.acc_id+'_'+item.item_id))
+  );
+  // 排序：未全部集齐在前，再按总缺口降序
   show.sort((a,b) => {
-    const ai = selOrder.indexOf(a.acc_id), bi = selOrder.indexOf(b.acc_id);
-    if (ai !== bi) return ai - bi;
-    const ga = bm.gathered.has(a.acc_id+'_'+a.item_id)?1:0, gb = bm.gathered.has(b.acc_id+'_'+b.item_id)?1:0;
-    if (ga !== gb) return ga - gb;
-    return (tOrd[a.transfer_level]||0) - (tOrd[b.transfer_level]||0);
+    const aDone = a.accounts.every(ac => ac.shortage === 0 || bm.gathered.has(ac.acc_id+'_'+a.item_id));
+    const bDone = b.accounts.every(ac => ac.shortage === 0 || bm.gathered.has(ac.acc_id+'_'+b.item_id));
+    if (aDone !== bDone) return aDone ? 1 : -1;
+    const aShort = a.accounts.reduce((s,ac) => s + ac.shortage, 0);
+    const bShort = b.accounts.reduce((s,ac) => s + ac.shortage, 0);
+    return bShort - aShort;
   });
 
   document.getElementById('bmShortageBody').innerHTML = show.length
     ? show.map(item => {
-      const gKey = item.acc_id+'_'+item.item_id;
-      const done = bm.gathered.has(gKey);
-      // 调货标签
-      let transferTag = '';
-      if (!done && item.shortage > 0) {
-        if (item.transfer_level === 'none') {
-          transferTag = '<span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;background:rgba(240,68,68,.12);color:var(--danger);border:1px solid rgba(240,68,68,.2);margin-left:6px">无法调货</span>';
-        } else if (item.transfer_level === 'multi') {
-          transferTag = '<span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.2);margin-left:6px">可调货</span>';
-        } else if (item.transfer_level === 'single') {
-          transferTag = '<span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;background:rgba(59,130,246,.12);color:#3b82f6;border:1px solid rgba(59,130,246,.2);margin-left:6px">可直补</span>';
-        }
-      }
-      // 也关注标注
-      const alsoHtml = item.also_watched.length
-        ? item.also_watched.map(n => `<span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:11px;font-weight:500;background:rgba(251,191,36,.12);color:#f59e0b;border:1px solid rgba(251,191,36,.25);margin-left:4px">${_bmEsc(n)} 也关注</span>`).join('')
-        : '';
-      // 多账号时显示账号名
-      const accLabel = multiAcc ? `<span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;background:${_bmGetAccColor(item.acc_id).bg};color:${_bmGetAccColor(item.acc_id).fg};border:1px solid ${_bmGetAccColor(item.acc_id).bd};margin-right:5px">${_bmEsc(item.acc_name)}</span>` : '';
+      const allDone = item.accounts.every(a => a.shortage === 0 || bm.gathered.has(a.acc_id+'_'+item.item_id));
+      const totalNeeded = Math.max(...item.accounts.map(a => a.needed));
+      const totalShortage = item.accounts.reduce((s,a) => s + (bm.gathered.has(a.acc_id+'_'+item.item_id) ? 0 : a.shortage), 0);
 
-      return `<tr style="${done?'opacity:.45':''}">
-        <td><img class="item-img" src="/api/items/${item.item_id}/image" onerror="this.style.opacity=.2" style="${done?'filter:grayscale(1)':''}"></td>
-        <td><div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px">
-            ${accLabel}<span style="font-weight:500;${done?'text-decoration:line-through;color:var(--text3)':''}">${_bmEsc(item.name_zh)}</span>${alsoHtml}
-          </div>
-          <div style="font-size:10px;color:var(--text3);margin-top:1px">${item.sources.join(' | ')}</div></td>
-        <td class="col-num" style="color:var(--text2)">${item.total_needed}</td>
-        <td class="col-num" style="color:var(--accent2)">${item.current_stock}</td>
-        <td class="col-num"><span style="font-weight:700;color:${done?'var(--success)':'var(--danger)'}">${done?'✓':'-'+item.shortage}</span>${transferTag}</td>
-        <td>${done?'<span style="display:inline-flex;align-items:center;gap:3px;padding:4px 10px;border-radius:4px;font-size:12px;font-weight:600;background:var(--success-light);color:var(--success);border:1px solid rgba(52,211,153,.3)">✓ 已集齐</span>'
-          :`<button class="btn small" onclick="_bmMarkGathered(${item.acc_id},'${item.item_id}')" style="border-color:var(--accent);color:var(--accent)">集齐</button>`}</td>
+      // 各账号库存标签（和订单页一致的 inline tag 样式，但不可点击）
+      const accHtml = item.accounts.filter(a => a.stock > 0 || a.needed > 0).map(a => {
+        const c = _bmAccColor(a.acc_id);
+        return `<span style="display:inline-flex;align-items:center;gap:3px;margin:1px 2px;padding:2px 8px;border-radius:4px;font-size:12px;background:var(--bg3);border:1.5px solid ${c.border}">
+          <span style="color:${c.text};font-weight:500">${_bmEsc(a.acc_name)}</span>
+          <span style="font-weight:700;color:var(--text1)">×${a.stock}</span>
+        </span>`;
+      }).join('');
+
+      // 状态
+      let statusHtml;
+      if (allDone) statusHtml = '<span style="color:var(--success);font-weight:600">✓ 齐</span>';
+      else statusHtml = `<span style="color:var(--danger);font-weight:600">缺 ${totalShortage}</span>`;
+
+      return `<tr style="${allDone?'opacity:.45':''}">
+        <td><img class="item-img" src="/api/items/${item.item_id}/image" onerror="this.style.opacity=.2" style="${allDone?'filter:grayscale(1)':''}"></td>
+        <td>
+          <div style="font-size:13px;font-weight:500;${allDone?'text-decoration:line-through;color:var(--text3)':''}">${_bmEsc(item.name_zh)}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:1px">${_bmEsc(item.name_en)}</div>
+        </td>
+        <td class="col-num" style="font-weight:600">${totalNeeded}</td>
+        <td>${accHtml || '<span style="font-size:12px;color:var(--text3)">无库存</span>'}</td>
+        <td class="col-num">${statusHtml}</td>
+        <td>${allDone?'':`<button class="btn small" onclick="_bmMarkGatheredAll('${item.item_id}')" style="border-color:var(--accent);color:var(--accent)">集齐</button>`}</td>
       </tr>`;}).join('')
     : '<tr><td colspan="6" class="empty">暂无缺货物品 ✓</td></tr>';
+}
+
+function _bmMarkGatheredAll(itemId) {
+  for (const acc of _bmSelectedAccList()) {
+    bm.gathered.add(acc.id+'_'+itemId);
+  }
+  _bmRenderShortage();
+  _bmRenderOverview();
 }
 
 function _bmMarkGathered(accId, itemId) {
   bm.gathered.add(accId+'_'+itemId);
   _bmRenderShortage();
-  _bmRenderInstock();
   _bmRenderOverview();
 }
 
-function _bmLoadInstock() {
-  // 从补货清单中取有缺口的物品，按账号分行
-  _bmInstockData = _bmShortageData.filter(i => i.shortage > 0 || bm.gathered.has(i.acc_id+'_'+i.item_id));
-  _bmRenderInstock();
-}
-
-function _bmRenderInstock() {
-  let show = _bmInstockData.filter(i => i.other_stocks.length > 0 || bm.gathered.has(i.acc_id+'_'+i.item_id));
-  const multiAcc = bm.selectedAccounts.size > 1;
-
-  document.getElementById('bmInstockBody').innerHTML = show.length
-    ? show.map(item => {
-      const gKey = item.acc_id+'_'+item.item_id;
-      const done = bm.gathered.has(gKey);
-      const accLabel = multiAcc ? `<span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;background:${_bmGetAccColor(item.acc_id).bg};color:${_bmGetAccColor(item.acc_id).fg};border:1px solid ${_bmGetAccColor(item.acc_id).bd};margin-right:5px">${_bmEsc(item.acc_name)}</span>` : '';
-
-      // 其他账号库存标签（按账号名排序，能独立补齐的加呼吸灯）
-      const sortedStocks = [...item.other_stocks].sort((a,b) => a.account_name.localeCompare(b.account_name));
-      const otherHtml = sortedStocks.map(a => {
-        const c = _bmGetAccColor(a.account_id);
-        const canFill = !done && a.quantity >= item.shortage;
-        return `<span style="display:inline-block;margin:1px 3px;padding:2px 8px;border-radius:4px;
-          background:${c.bg};border:1px solid ${c.bd};
-          ${canFill?'animation:inv-breathe-green 2.5s ease-in-out infinite;':''}">
-          <span style="color:${c.fg};font-weight:500">${_bmEsc(a.account_name)}</span>
-          <span style="color:${c.fg};font-weight:700;margin-left:4px">×${a.quantity}</span>
-        </span>`;
-      }).join('');
-
-      return `<tr style="${done?'opacity:.45':''}">
-        <td><img class="item-img" src="/api/items/${item.item_id}/image" onerror="this.style.opacity=.2" style="${done?'filter:grayscale(1)':''}"></td>
-        <td><div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px">
-            ${accLabel}<span style="font-weight:500;${done?'text-decoration:line-through;color:var(--text3)':''}">${_bmEsc(item.name_zh)}</span>
-          </div>
-          <div style="font-size:10px;color:var(--text3);margin-top:1px">${item.sources.join(' | ')}</div></td>
-        <td class="col-num" style="color:var(--accent2)">${item.current_stock}</td>
-        <td class="col-num" style="font-weight:700;color:${done?'var(--success)':'var(--danger)'}">${done?'✓':item.shortage>0?'-'+item.shortage:'✓'}</td>
-        <td style="font-size:12px">${done?'<span style="color:var(--text3);font-size:11px">—</span>':otherHtml||'<span style="color:var(--text3);font-size:11px">无其他账号库存</span>'}</td>
-        <td>${done?'<span style="display:inline-flex;align-items:center;gap:3px;padding:4px 10px;border-radius:4px;font-size:12px;font-weight:600;background:var(--success-light);color:var(--success);border:1px solid rgba(52,211,153,.3)">✓ 已集齐</span>'
-          :`<button class="btn small" onclick="_bmMarkGathered(${item.acc_id},'${item.item_id}')" style="border-color:var(--accent);color:var(--accent)">集齐</button>`}</td>
-      </tr>`;}).join('')
-    : '<tr><td colspan="6" class="empty">暂无需要调货的物品</td></tr>';
-}
 
 function _bmExportShortage() {
-  const pend = _bmShortageData.filter(i => !bm.gathered.has(i.acc_id+'_'+i.item_id) && i.shortage > 0);
-  if(!pend.length){toast('当前没有缺货物品','success');return;}
+  // 从新数据结构中按账号分组导出
   const groups = {};
-  for (const i of pend) {
-    if (!groups[i.acc_id]) groups[i.acc_id] = { name: i.acc_name, items: [] };
-    groups[i.acc_id].items.push(i);
+  for (const item of _bmShortageData) {
+    for (const a of item.accounts) {
+      if (a.shortage <= 0 || bm.gathered.has(a.acc_id+'_'+item.item_id)) continue;
+      if (!groups[a.acc_id]) groups[a.acc_id] = { name: a.acc_name, items: [] };
+      groups[a.acc_id].items.push({ name_zh: item.name_zh, shortage: a.shortage, needed: a.needed });
+    }
   }
+  if (!Object.keys(groups).length) { toast('当前没有缺货物品','success'); return; }
   let text = '';
   for (const g of Object.values(groups)) {
     text += `【${g.name}】补货清单\n`;
     text += '----------------\n';
     for (const i of g.items) {
-      // 缺口=需求时省略"/需X"
-      const needPart = i.shortage < i.total_needed ? `/需${i.total_needed}` : '';
+      const needPart = i.shortage < i.needed ? `/需${i.needed}` : '';
       text += `${i.name_zh} 缺${i.shortage}${needPart}\n`;
-      // 只有能调货时才标注来源
-      if (i.other_stocks.length > 0) {
-        const parts = [];
-        let fromOthers = 0;
-        const sorted = [...i.other_stocks].sort((a,b) => b.quantity - a.quantity);
-        for (const s of sorted) {
-          const take = Math.min(s.quantity, i.shortage - fromOthers);
-          if (take <= 0) break;
-          parts.push(`${s.account_name}调${take}`);
-          fromOthers += take;
-        }
-        const ext = i.shortage - fromOthers;
-        if (ext > 0) parts.push(`外补${ext}`);
-        text += `  ← ${parts.join(' + ')}\n`;
-      }
     }
     text += '\n';
   }
@@ -456,6 +363,7 @@ function _bmSwitchView(view, btn) {
   document.querySelectorAll('#bmSubNav .nav-sub-item').forEach(s => s.classList.remove('active'));
   if (btn) btn.classList.add('active');
   // 加载视图数据
+  if (view === 'overview') { _bmRenderOverview(); _bmLoadShortage(); }
   if (view === 'restock') _bmLoadRestock();
   if (view === 'settings') _bmOpenSettings();
 }
@@ -518,7 +426,7 @@ async function _bmLoadRestock() {
 async function _bmOpenSettings() {
   // 每次打开设置都重新拉取最新套餐和库存数据，保持与套餐库同步
   const [bundles, inventory] = await Promise.all([
-    api('/api/bundles'), api('/api/inventory'),
+    api('/api/bundles').catch(() => []), api('/api/inventory').catch(() => []),
   ]);
   bm.bundles = bundles || [];
   bm.inventory = inventory || [];
@@ -574,7 +482,7 @@ function _bmBuildSettingsItems() {
   if(bm.s.search){const q=bm.s.search.toLowerCase();items=items.filter(it=>(it.name_zh||'').toLowerCase().includes(q)||(it.name_en||'').toLowerCase().includes(q)||(it.item_id||'').toLowerCase().includes(q));}
   if(bm.s.showOnly==='starred') items=items.filter(it=>rules.some(r=>r.rule_type==='item'&&r.target_id===it.item_id));
   if(bm.s.showOnly==='unstarred') items=items.filter(it=>!rules.some(r=>r.rule_type==='item'&&r.target_id===it.item_id));
-  items=[...items].sort((a,b)=>{const ra=BM_RARITY_ORDER[a.rarity]??9,rb=BM_RARITY_ORDER[b.rarity]??9;return ra!==rb?ra-rb:(a.name_zh||'').localeCompare(b.name_zh||'','zh');});
+  items=[...items].sort((a,b)=>{const ra=INV_RARITY_ORDER[a.rarity]??9,rb=INV_RARITY_ORDER[b.rarity]??9;return ra!==rb?ra-rb:(a.name_zh||'').localeCompare(b.name_zh||'','zh');});
 
   const curIds=items.map(it=>it.item_id);
   const allStar=curIds.length>0&&curIds.every(id=>rules.some(r=>r.rule_type==='item'&&r.target_id===id));
@@ -583,13 +491,13 @@ function _bmBuildSettingsItems() {
   const rl={Legendary:'传说',Epic:'史诗',Rare:'稀有',Uncommon:'优秀',Common:'普通'};
 
   // 子类型标签按钮
-  const group = bm.s.typeGroup ? BM_TYPE_GROUPS.find(g => g.label === bm.s.typeGroup) : null;
+  const group = bm.s.typeGroup ? INV_TYPE_GROUPS.find(g => g.label === bm.s.typeGroup) : null;
   let subtypeBtns = '';
   if (group && group.types.length > 1) {
     subtypeBtns = `<div style="display:flex;flex-wrap:wrap;gap:4px;padding:4px 20px 0;flex-shrink:0">
       <span style="font-size:11px;color:var(--text3);margin-right:2px;align-self:center">子类</span>
       <button class="tag-btn${!bm.s.subType?' active':''}" onclick="bm.s.subType=null;_bmRefreshSettingsInner()" style="font-size:11px;padding:3px 10px">全部</button>
-      ${group.types.map(t=>`<button class="tag-btn${bm.s.subType===t?' active':''}" onclick="bm.s.subType='${t}';_bmRefreshSettingsInner()" style="font-size:11px;padding:3px 10px">${INV_TYPE_LABELS_BM[t]||t}</button>`).join('')}
+      ${group.types.map(t=>`<button class="tag-btn${bm.s.subType===t?' active':''}" onclick="bm.s.subType='${t}';_bmRefreshSettingsInner()" style="font-size:11px;padding:3px 10px">${INV_TYPE_LABELS[t]||t}</button>`).join('')}
     </div>`;
   }
 
@@ -599,7 +507,7 @@ function _bmBuildSettingsItems() {
     <span style="width:1px;height:16px;background:var(--border2)"></span>
     <span style="font-size:11px;color:var(--text3)">分类</span>
     <button class="tag-btn${!bm.s.typeGroup?' active':''}" onclick="bm.s.typeGroup=null;bm.s.subType=null;_bmRefreshSettingsInner()" style="font-size:11px;padding:3px 10px">全部</button>
-    ${BM_TYPE_GROUPS.map(g=>`<button class="tag-btn${bm.s.typeGroup===g.label?' active':''}" onclick="bm.s.typeGroup=bm.s.typeGroup==='${g.label}'?null:'${g.label}';bm.s.subType=null;_bmRefreshSettingsInner()" style="font-size:11px;padding:3px 10px">${g.label}</button>`).join('')}
+    ${INV_TYPE_GROUPS.map(g=>`<button class="tag-btn${bm.s.typeGroup===g.label?' active':''}" onclick="bm.s.typeGroup=bm.s.typeGroup==='${g.label}'?null:'${g.label}';bm.s.subType=null;_bmRefreshSettingsInner()" style="font-size:11px;padding:3px 10px">${g.label}</button>`).join('')}
     <span style="width:1px;height:16px;background:var(--border2)"></span>
     <span style="font-size:11px;color:var(--text3)">稀有度</span>
     <button class="tag-btn${!bm.s.rarity?' active':''}" onclick="bm.s.rarity='';_bmRefreshSettingsInner()" style="font-size:11px;padding:3px 10px">全部</button>
@@ -622,7 +530,7 @@ function _bmBuildSettingsItems() {
         <div class="item-thumb"><img src="/api/items/${it.item_id}/image" onerror="this.style.opacity=.2"></div>
         <div class="item-body">
           <div class="item-name">${_bmEsc(it.name_zh||it.item_id)}</div>
-          <div class="item-sub">${INV_TYPE_LABELS_BM[it.type]||it.type||''} · ${it.rarity||''}${curQty?` · 库存 ${curQty}`:''}</div>
+          <div class="item-sub">${INV_TYPE_LABELS[it.type]||it.type||''} · ${it.rarity||''}${curQty?` · 库存 ${curQty}`:''}</div>
         </div>
         ${starred?`<input class="threshold-input" type="text" inputmode="numeric" value="${rule.threshold||''}" placeholder="—" title="预警数量" onblur="_bmUpdateThreshold(${rule.id},this.value,this)" onkeydown="if(event.key==='Enter')this.blur()">`:''}
         <span class="toggle-switch${starred?' on':''}" onclick="_bmToggleStar(event,'${it.item_id}')" title="${starred?'取消关注':'添加关注'}">
@@ -706,7 +614,16 @@ function _bmBuildSettingsBundles() {
   if(tag==='__custom__') filtered=bm.bundles.filter(b=>b.source==='manual');
   else if(tag) filtered=bm.bundles.filter(b=>b.source!=='manual'&&_bundleBaseName(b.name)===tag);
 
-  const tb=(id,label)=>`<button class="tag-btn${tag===id?' active':''}" onclick="bm.s.bundleTag=bm.s.bundleTag==='${id.replace(/'/g,"\\'")}'?null:'${id.replace(/'/g,"\\'")}';_bmRefreshSettingsInner()" style="font-size:12px">${_bmEsc(label)}</button>`;
+  // 计算某个 baseName 下当前账号已关注的套餐数
+  const watchedCountOf=(baseName)=>{
+    if(baseName==='__custom__') return bm.bundles.filter(b=>b.source==='manual'&&watchedIds.has(b.id)).length;
+    return bm.bundles.filter(b=>b.source!=='manual'&&_bundleBaseName(b.name)===baseName&&watchedIds.has(b.id)).length;
+  };
+  const tb=(id,label)=>{
+    const cnt=watchedCountOf(id);
+    const badge=cnt>0?` <span style="color:var(--accent);font-weight:700">${cnt}</span>`:'';
+    return `<button class="tag-btn${tag===id?' active':''}" onclick="bm.s.bundleTag=bm.s.bundleTag==='${id.replace(/'/g,"\\'")}'?null:'${id.replace(/'/g,"\\'")}';_bmRefreshSettingsInner()" style="font-size:12px">${_bmEsc(label)}${badge}</button>`;
+  };
   const sep='<span style="width:1px;height:16px;background:var(--border2);flex-shrink:0;margin:0 2px"></span>';
   const groupLabel=(text)=>`<span style="font-size:10px;color:var(--text3);font-weight:600;margin:0 2px;white-space:nowrap">${text}</span>`;
 

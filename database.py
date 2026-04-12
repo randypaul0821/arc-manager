@@ -143,6 +143,22 @@ def init_db():
             );
         """)
 
+        # ── 索引：加速高频查询列 ──
+        c.executescript("""
+            CREATE INDEX IF NOT EXISTS idx_inventory_account
+                ON inventory(account_id);
+            CREATE INDEX IF NOT EXISTS idx_bundle_items_bundle
+                ON bundle_items(bundle_id);
+            CREATE INDEX IF NOT EXISTS idx_bundle_aliases_bundle
+                ON bundle_aliases(bundle_id);
+            CREATE INDEX IF NOT EXISTS idx_order_items_order
+                ON order_items(order_id);
+            CREATE INDEX IF NOT EXISTS idx_item_aliases_item
+                ON item_aliases(item_id);
+            CREATE INDEX IF NOT EXISTS idx_orders_status
+                ON orders(status);
+        """)
+
         _migrate(c)
 
     logger.info("数据库初始化完成")
@@ -204,17 +220,24 @@ def _migrate(c):
     except Exception as e:
         logger.warning(f"迁移步骤4异常: {e}", exc_info=True)
 
-    # 5
+    # 5 — 旧 custom_bundles → bundles/bundle_items/bundle_aliases
     try:
         import json
         old = c.execute("SELECT id, name, source, items, aliases FROM custom_bundles").fetchall()
+        migrated = 0
         for r in old:
             c.execute("INSERT OR IGNORE INTO bundles (id, name, source) VALUES (?, ?, ?)",
                       (r["id"], r["name"], r["source"] or "manual"))
             items = json.loads(r["items"] or "[]")
             for it in items:
-                c.execute("INSERT OR IGNORE INTO bundle_items (bundle_id, item_id, quantity) VALUES (?, ?, ?)",
-                          (r["id"], it.get("item_id") or it.get("id"), it.get("quantity", 1)))
+                iid = it.get("item_id") or it.get("id")
+                if not iid:
+                    continue  # 跳过无效物品（防止 NOT NULL 约束失败）
+                try:
+                    c.execute("INSERT OR IGNORE INTO bundle_items (bundle_id, item_id, quantity) VALUES (?, ?, ?)",
+                              (r["id"], iid, it.get("quantity", 1)))
+                except sqlite3.IntegrityError:
+                    pass  # bundle_id 已不存在（被套餐重建覆盖），跳过
             try:
                 aliases = json.loads(r["aliases"] or "[]")
                 for alias in aliases:
@@ -223,10 +246,13 @@ def _migrate(c):
                                   (r["id"], alias))
             except Exception:
                 pass
-        if old:
-            logger.info(f"  迁移 {len(old)} 个套餐到新表结构")
+            migrated += 1
+        # 迁移完成后删除旧表，避免每次启动重复执行
+        c.execute("DROP TABLE IF EXISTS custom_bundles")
+        if migrated:
+            logger.info(f"  迁移 {migrated} 个套餐到新表结构，已删除旧表 custom_bundles")
     except sqlite3.OperationalError:
-        logger.debug("迁移步骤5: custom_bundles 表不存在，跳过")
+        pass  # custom_bundles 表不存在，已完成迁移
     except Exception as e:
         logger.warning(f"迁移步骤5异常: {e}", exc_info=True)
 
@@ -339,6 +365,33 @@ def _migrate(c):
     ).rowcount
     if orphan:
         logger.info(f"  清理 {orphan} 条孤儿套餐监控规则")
+
+    # 15 — 修复 item_aliases UNIQUE 约束
+    # 旧 schema: item_id UNIQUE（一个物品只能一个别名 — 错）
+    # 新 schema: alias UNIQUE（一个物品可多别名，但一个别名只能对应一个物品）
+    try:
+        sql = c.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='item_aliases'"
+        ).fetchone()
+        if sql and "item_id TEXT NOT NULL UNIQUE" in sql[0]:
+            logger.info("  迁移 item_aliases: item_id UNIQUE → alias UNIQUE")
+            c.execute("""
+                CREATE TABLE item_aliases_new (
+                    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                    item_id    TEXT NOT NULL,
+                    alias      TEXT NOT NULL UNIQUE,
+                    created_at TEXT DEFAULT (datetime('now'))
+                )
+            """)
+            c.execute("""
+                INSERT OR IGNORE INTO item_aliases_new (id, item_id, alias, created_at)
+                SELECT id, item_id, alias, created_at FROM item_aliases
+            """)
+            c.execute("DROP TABLE item_aliases")
+            c.execute("ALTER TABLE item_aliases_new RENAME TO item_aliases")
+            logger.info("  item_aliases 迁移完成")
+    except Exception as e:
+        logger.warning(f"迁移步骤15异常: {e}", exc_info=True)
 
 
 if __name__ == "__main__":

@@ -12,6 +12,34 @@ function openNewOrder() {
   openModal('orderModal');
 }
 
+/**
+ * 把解析出的单价 (line.unit_price) 写入 state._itemPrices 作为售价；
+ * 同时检查所有物品：如果保存的成本价 > 现在的售价，把成本置 0
+ * （用户指出的：之前测试时胡乱设的脏数据要清掉）
+ */
+function _applyParsedPriceOverrides() {
+  if (!state._itemPrices) state._itemPrices = {};
+
+  // 第一步：用解析单价覆盖售价
+  _parsedOrders.forEach(o => o.items.forEach(l => {
+    if (l.unit_price == null || !l.matched) return;
+    const pid = l.matched.item_id;
+    const cur = state._itemPrices[pid] || { cost: 0, sell: 0 };
+    state._itemPrices[pid] = { cost: cur.cost || 0, sell: l.unit_price };
+  }));
+
+  // 第二步：扫描本订单涉及的所有物品，cost > sell 则清空成本
+  _parsedOrders.forEach(o => o.items.forEach(l => {
+    if (!l.matched) return;
+    const pid = l.matched.item_id;
+    const pr = state._itemPrices[pid];
+    if (!pr) return;
+    if ((pr.cost || 0) > 0 && (pr.sell || 0) > 0 && pr.cost > pr.sell) {
+      state._itemPrices[pid] = { cost: 0, sell: pr.sell };
+    }
+  }));
+}
+
 async function parseOrderText() {
   const text = document.getElementById('orderRawText').value.trim();
   if (!text) return toast('请先粘贴订单文本', 'error');
@@ -31,6 +59,9 @@ async function parseOrderText() {
 
   // 加载物品已有价格
   state._itemPrices = await api('/api/item-prices') || {};
+
+  // 应用规则：解析到的单价覆盖售价；成本 > 售价时清空成本
+  _applyParsedPriceOverrides();
 
   renderParsedPreview();
   document.getElementById('parseStep').style.display = 'none';
@@ -97,20 +128,23 @@ function renderParsedPreview() {
           <div>
             <div style="font-size:11px;font-weight:500;color:var(--accent);word-break:break-all;line-height:1.2">${line.raw_name}</div>
             ${line._is_coin ? `<div style="font-size:10px;color:#f59e0b;margin-top:2px">🪙 ${(line._coin_amount||0).toLocaleString()} 金币</div>` : ''}
+            ${line._ai_parsed ? `<div style="font-size:9px;color:#a78bfa;margin-top:2px" title="此行由 AI 兜底解析（正则未识别）— 请核对数量">🤖 AI解析</div>` : ''}
+            ${line._unparsed && !line._ai_parsed ? `<div style="font-size:9px;color:var(--danger);margin-top:2px" title="正则未识别且 AI 也没接管，按原文走匹配">⚠ 未识别</div>` : ''}
           </div>
         </div>
 
-        <div style="flex:0 0 36px;display:flex;align-items:center;justify-content:center;padding:2px;border-right:1px solid var(--border)">
+        <div style="flex:0 0 44px;display:flex;align-items:center;justify-content:center;padding:2px;border-right:1px solid var(--border)">
           <div style="text-align:center">
             <span style="font-size:12px;font-weight:600;color:var(--accent)">${line.quantity}</span>
             ${line._is_coin ? `<div style="font-size:9px;color:var(--text3)">伙伴鸭</div>` : ''}
+            ${line.unit_price != null ? `<div style="font-size:9px;color:#f59e0b" title="从文本解析的单价">¥${line.unit_price}/个</div>` : ''}
           </div>
         </div>
 
         <div style="flex:0 0 20px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:10px">→</div>
 
         <div style="flex:1 1 0;min-width:0;position:relative;display:flex;align-items:stretch;overflow:hidden">
-          <div onclick="${m || (line.candidates && line.candidates.length) ? `toggleCandidates('${uid}')` : ''}"
+          <div onclick="toggleCandidates('${uid}')"
             style="cursor:pointer;flex:1;background:var(--bg3);border:1.5px solid ${borderColor};
                    border-radius:5px;margin:2px 0;display:flex;align-items:stretch;overflow:hidden">
             ${m ? `
@@ -145,10 +179,10 @@ function renderParsedPreview() {
             ` : `<div style="display:flex;align-items:center;padding:0 10px"><span style="color:var(--danger);font-size:12px">${needsManual ? '🤖 AI未识别，请手动处理' : '⚠ 未匹配'}</span></div>`}
           </div>
 
-          ${line.candidates && line.candidates.length > 0 ? `
           <div id="cands_${uid}" style="display:none;position:fixed;
             background:var(--bg2);border:1px solid var(--border);border-radius:6px;z-index:99999;
-            max-height:300px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.7);display:none">
+            max-height:360px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.7)">
+            ${(line.candidates && line.candidates.length > 0) ? `
             <div style="max-height:220px;overflow-y:auto">
             ${line.candidates.map((c, ci) => {
               const chl = !c.is_bundle ? highlightMatch(line.raw_name, c.name_en) : {matched:'',ratio:0};
@@ -169,15 +203,15 @@ function renderParsedPreview() {
                 <span style="font-size:10px;color:var(--text3);flex-shrink:0;margin-left:4px">${c.score ? c.score+'分' : ''}</span>
               </div>`;
             }).join('')}
-            </div>
-            <div style="border-top:1px solid var(--border);padding:6px 8px">
-              <input type="text" placeholder="手动搜索物品..." style="width:100%;font-size:12px;padding:4px 8px"
+            </div>` : `<div style="padding:6px 10px;font-size:11px;color:var(--text3);border-bottom:1px solid var(--border)">没有自动候选，请手动搜索 ↓</div>`}
+            <div style="border-top:1px solid var(--border);padding:6px 8px;background:var(--bg3)">
+              <input type="text" placeholder="🔍 手动搜索物品名..." style="width:100%;font-size:12px;padding:5px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;color:var(--text)"
                 onclick="event.stopPropagation()"
                 oninput="candManualSearch(this,'${uid}',${oi},${idx})"
                 onkeydown="if(event.key==='Enter'){event.preventDefault();const c=document.getElementById('candsearch_${uid}'),f=c&&c.querySelector('.ac-item');if(f)f.dispatchEvent(new MouseEvent('mousedown',{bubbles:true}))}">
-              <div id="candsearch_${uid}" style="max-height:150px;overflow-y:auto"></div>
+              <div id="candsearch_${uid}" style="max-height:160px;overflow-y:auto;margin-top:4px"></div>
             </div>
-          </div>` : ''}
+          </div>
 
           ${line.suggest_bundle ? `
           <span style="align-self:center;margin-left:4px;flex-shrink:0;font-size:10px;color:var(--warning)" title="需要创建套餐: ${line.suggest_bundle.bundle_alias}">📦</span>` : ''}
@@ -331,10 +365,32 @@ function candManualSearch(input, uid, oi, idx) {
   }, 200);
 }
 
-function selectCandManual(oi, idx, itemId, nameZh, nameEn) {
+async function selectCandManual(oi, idx, itemId, nameZh, nameEn) {
   const line = _parsedOrders[oi].items[idx];
   line.matched = { item_id: itemId, name_zh: nameZh, name_en: nameEn, score: 100, image_url: `/api/items/${itemId}/image` };
+  // 关闭候选框
+  const uid = `${oi}_${idx}`;
+  const dd = document.getElementById('cands_' + uid);
+  if (dd) dd.style.display = 'none';
   renderParsedPreview();
+
+  // 立即把 raw_name → itemId 写成别名，方便用户看到即时反馈
+  // （后端在 create_order 时也会做一次保底，这里是为了 UX）
+  try {
+    const rawAlias = (line.raw_name || '').trim();
+    if (rawAlias && rawAlias !== nameZh && rawAlias.toLowerCase() !== (nameEn || '').toLowerCase()) {
+      const res = await api(`/api/items/${itemId}/aliases`, {
+        method: 'POST',
+        body: JSON.stringify({ alias: rawAlias }),
+      });
+      if (res && !res.error) {
+        toast(`已关联别名：${rawAlias} → ${nameZh}`, 'success');
+      }
+    }
+  } catch (e) {
+    // 静默：别名关联失败不影响订单流程
+    console.warn('alias link failed', e);
+  }
 }
 
 /** 收集所有未识别的套餐，批量跳转到套餐页逐个创建 */
@@ -371,6 +427,7 @@ async function createAllSuggestedBundles() {
 async function confirmOrder(silent) {
   const rawText = document.getElementById('orderRawText').value;
   let created = 0;
+  const createdIds = [];  // 收集新建订单 ID，用于创建后自动选中
 
   for (const order of _parsedOrders) {
     const items = order.items
@@ -378,6 +435,8 @@ async function confirmOrder(silent) {
       .map(l => {
         const pid = l.matched.item_id;
         const pr = state._itemPrices ? (state._itemPrices[pid] || {}) : {};
+        // 文本里解析到的单价（如 "2女王1.2一个"）优先作为售价
+        const parsedPrice = (l.unit_price != null) ? l.unit_price : null;
         return {
           item_id:    pid,
           raw_name:   l.raw_name,
@@ -385,7 +444,7 @@ async function confirmOrder(silent) {
           is_bundle:  l.matched.is_bundle || false,
           bundle_id:  l.matched.bundle_id,
           cost_price: pr.cost || 0,
-          sell_price: pr.sell || 0,
+          sell_price: parsedPrice != null ? parsedPrice : (pr.sell || 0),
         };
       });
     if (!items.length) continue;
@@ -398,7 +457,10 @@ async function confirmOrder(silent) {
         raw_text: rawText
       })
     });
-    if (!res.error) created++;
+    if (!res.error) {
+      created++;
+      if (res.id) createdIds.push(res.id);
+    }
   }
 
   if (created === 0 && !silent) return toast('没有可创建的订单', 'error');
@@ -409,6 +471,11 @@ async function confirmOrder(silent) {
   } else if (created > 0) {
     toast(`已保存 ${created} 个订单`, 'success');
   }
-  await loadOrders();
+
+  // 确保在待处理标签页，并自动选中刚创建的订单
+  if (createdIds.length) {
+    state.orders.activeTab = 'pending';
+  }
+  await loadOrders(createdIds.length ? { selectIds: createdIds } : undefined);
   await loadShortage();
 }

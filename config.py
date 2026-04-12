@@ -26,3 +26,8 @@ AUTO_REFRESH_COOLDOWN_MINUTES = 30
 # AI 匹配配置
 CLAUDE_API_KEY = os.environ.get("CLAUDE_API_KEY", "")
 CLAUDE_MODEL   = "claude-haiku-4-5-20251001"
+
+# 订单配置
+COIN_UNIT_PRICE = 7000           # 金币兑换为"伙伴鸭"时的单价
+ORDER_CLEANUP_DAYS = 7           # 自动归档已完成订单的天数
+UNIT_PRICE_SANITY_MAX = 5        # 游戏物品单价经验上限（用于总价/单价判别）

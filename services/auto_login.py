@@ -10,7 +10,7 @@ logger = logging.getLogger("auto_login")
 
 PROFILES_DIR = os.path.join(APP_DIR, "browser_profiles")
 ARCTRACKER_URL = "https://arctracker.io/"
-ARCTRACKER_SIGNIN_URL = "https://arctracker.io/zh-CN/sign-in"
+ARCTRACKER_SIGNIN_URL = "https://arctracker.io/zh-CN/signin"
 ARCTRACKER_STASH_URL = "https://arctracker.io/zh-CN/stash"
 COOKIE_NAMES = ("better-auth.session_token", "better-auth.session_data")
 
@@ -123,12 +123,13 @@ def _do_init_login(account_id: int, account_name: str):
     captured_creds = {}  # 用于存放拦截到的邮箱密码
 
     def _on_request(request):
-        """拦截登录请求，提取邮箱密码
+        """拦截登录/注册请求，提取邮箱密码
         arctracker 登录端点: POST /api/auth/sign-in/email
+        arctracker 注册端点: POST /api/auth/sign-up/email
         请求体: {"email":"xxx@xxx.com","password":"xxx"}
         """
         try:
-            if request.method == "POST" and "sign-in" in request.url:
+            if request.method == "POST" and ("sign-in" in request.url or "sign-up" in request.url):
                 logger.info(f"账号 {account_name} 拦截到登录请求: {request.url}")
                 post_data = request.post_data
                 if post_data:
@@ -443,12 +444,19 @@ def _do_auto_refresh(account_id: int, account_name: str):
 
     try:
         with sync_playwright() as p:
+            # 静默模式：把窗口移到屏幕外。页面仍正常渲染（不同于 headless —
+            # headless 下 Steam OpenID 会走不同代码路径导致登录按钮找不到），
+            # 只是视觉上不可见，避免打断用户当前操作。
+            silent_args = [
+                "--window-position=-32000,-32000",
+                "--window-size=1200,800",
+            ]
             browser = p.chromium.launch_persistent_context(
                 profile_dir,
                 headless=False,
                 executable_path=p.chromium.executable_path,
                 viewport={"width": 1200, "height": 800},
-                args=_browser_args(),
+                args=_browser_args(silent_args),
             )
 
             page = browser.pages[0] if browser.pages else browser.new_page()
@@ -467,24 +475,62 @@ def _do_auto_refresh(account_id: int, account_name: str):
                     logger.info(f"账号 {account_name} 已登录（cookie 未过期），跳过登录步骤")
                     login_ok = True
                 else:
-                    # 点击侧边栏"登录"按钮打开登录弹窗
-                    login_link = page.locator('button:has-text("登录"), a:has-text("登录"), button:has-text("Sign In"), a:has-text("Sign In")').first
-                    login_link.click(timeout=5000)
-                    time.sleep(1)
+                    # 直接导航到登录页，避免"首页弹窗 vs 独立登录页"两种情况带来的不确定性
+                    if "/signin" not in page.url and "/sign-in" not in page.url:
+                        try:
+                            page.goto(ARCTRACKER_SIGNIN_URL, wait_until="domcontentloaded", timeout=30000)
+                            time.sleep(1)
+                        except Exception as e:
+                            logger.warning(f"账号 {account_name} 导航到登录页失败: {e}")
 
-                    # 在弹窗中填写邮箱密码
-                    email_input = page.locator('dialog input[type="email"], input[type="email"]').first
-                    pwd_input = page.locator('dialog input[type="password"], input[type="password"]').first
+                    # 填写邮箱密码（Playwright fill 会先清空再输入，覆盖浏览器自动填充并触发 React 事件）
+                    email_input = page.locator('input[type="email"], input[name="email"]').first
+                    pwd_input = page.locator('input[type="password"], input[name="password"]').first
+                    email_input.wait_for(state="visible", timeout=10000)
                     email_input.fill(email)
                     pwd_input.fill(password)
+                    logger.info(f"账号 {account_name} 已填写邮箱密码")
 
-                    # 点击登录按钮
-                    submit = page.locator('dialog button[type="submit"], button:has-text("登录"), button:has-text("Sign In")').first
-                    submit.click()
-                    logger.info(f"账号 {account_name} 已提交登录表单")
-                    login_ok = True
+                    # 点击提交按钮 — 严格限定在 form 或 dialog 范围内，避免页眉里的"登录"导航链接
+                    submitted = False
+                    try:
+                        submit = page.locator(
+                            'form button[type="submit"], dialog button[type="submit"]'
+                        ).first
+                        submit.wait_for(state="visible", timeout=5000)
+                        submit.click()
+                        submitted = True
+                        logger.info(f"账号 {account_name} 已点击表单 submit 按钮")
+                    except Exception as e:
+                        logger.warning(f"账号 {account_name} 表单 submit 按钮点击失败: {e}")
+
+                    # 兜底 1：直接在密码框按回车提交
+                    if not submitted:
+                        try:
+                            pwd_input.press("Enter")
+                            submitted = True
+                            logger.info(f"账号 {account_name} 已通过 Enter 键提交登录表单")
+                        except Exception as e:
+                            logger.warning(f"账号 {account_name} Enter 键提交失败: {e}")
+
+                    # 兜底 2：文本匹配任意可见的"登录/Sign In"按钮（严格限定在 form/dialog 范围）
+                    if not submitted:
+                        try:
+                            btn = page.locator(
+                                'form :is(button, input[type="submit"]):has-text("登录"), '
+                                'form :is(button, input[type="submit"]):has-text("Sign In"), '
+                                'dialog :is(button, input[type="submit"]):has-text("登录"), '
+                                'dialog :is(button, input[type="submit"]):has-text("Sign In")'
+                            ).first
+                            btn.click(timeout=3000)
+                            submitted = True
+                            logger.info(f"账号 {account_name} 已通过文本匹配点击登录按钮")
+                        except Exception as e:
+                            logger.warning(f"账号 {account_name} 文本匹配登录按钮失败: {e}")
+
+                    login_ok = submitted
             except Exception as e:
-                logger.warning(f"账号 {account_name} 登录操作失败: {e}")
+                logger.warning(f"账号 {account_name} 登录操作失败: {e}", exc_info=True)
                 # 可能已经登录了，继续检查 cookie
 
             # 等待登录完成，轮询 cookie（最多 30 秒）

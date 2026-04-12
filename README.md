@@ -50,15 +50,18 @@ Arc Manager Pro 是一个为 [Arc Raiders](https://arcraiders.com/) 游戏玩家
 
 - 多账号库存卡片视图，按武器 / 装备 / 材料 / 消耗品分类筛选
 - 按稀有度（传说 / 史诗 / 稀有 / 优秀 / 普通）过滤
+- **搜索历史记忆**：记住每个搜索词的选择偏好，下次搜索时优先展示
 - 库存阈值呼吸灯提示（绿 = 充足 / 黄 = 低库存 / 红 = 缺货）
 - 后台定时同步（默认每 30 分钟），支持手动触发
 
 ### Orders / 订单管理
 
-- **文本解析引擎**：粘贴客户聊天记录，自动提取「物品名 x 数量」
+- **文本解析引擎**：粘贴客户聊天记录，自动提取物品名、数量、单价，支持 14+ 种格式（`名称*数量`、`数量个名称 价格`、`(名称) x 数量 单价`、逗号/加号分隔等）
+- **智能价格判别**：自动识别尾部数字是单价还是总价——优先参照历史单价，无历史时用同品质同类型物品中位数推断
 - **模糊匹配算法**：基于 Bigram 分析 + 最长公共子串，容错率高
 - **AI 辅助匹配**：低置信度物品可调用 Claude API 二次匹配
 - 订单全生命周期管理（待处理 → 已完成 → 已归档）
+- **创建后自动选中**：新建订单后自动切换到该订单并显示物品需求
 - **物品需求表**：自动汇总选中订单的物品需求，显示各账号库存与可合成数量
 - **拿货联动**：在需求表中点击账号分配拿货来源，订单行物品标签实时更新状态（未分配 / 已备齐 / 缺货+缺口数）
 - 选中的拿货标签显示彩色流转渐变边框动画
@@ -140,6 +143,9 @@ python app.py
 | `SYNC_DELAY_SECONDS` | 4 | 多账号同步时逐个延迟（防频控） |
 | `SCHEDULER_INTERVAL_SECONDS` | 300 | 后台调度检查周期（秒） |
 | `AUTO_REFRESH_COOLDOWN_MINUTES` | 30 | 同步失败后自动刷新冷却时间 |
+| `COIN_UNIT_PRICE` | 7000 | 金币→伙伴鸭换算单价 |
+| `ORDER_CLEANUP_DAYS` | 7 | 已完成订单自动归档天数 |
+| `UNIT_PRICE_SANITY_MAX` | 5 | 物品单价经验上限（用于总价/单价判别） |
 
 **AI 匹配（可选）**：设置环境变量 `CLAUDE_API_KEY` 启用 Claude 辅助匹配。
 
@@ -182,16 +188,19 @@ arc-manager-pro/
 │
 ├── services/                   # 业务逻辑层
 │   ├── sync_service.py         #   后台同步调度器
-│   ├── match_service.py        #   模糊匹配引擎
-│   ├── order_service.py        #   订单全流程
+│   ├── match_service.py        #   文本解析（14+格式）& 模糊匹配引擎
+│   ├── order_service.py        #   订单 CRUD & 生命周期
+│   ├── shortage_service.py     #   库存短缺计算 & 补货建议
+│   ├── order_report_service.py #   订单统计 & 报表导出
 │   ├── item_service.py         #   物品数据加载（线程安全缓存）
 │   ├── bundle_service.py       #   套餐操作 & 成本计算
 │   ├── craft_service.py        #   合成树解析 & 可合成量计算
+│   ├── ai_match_service.py     #   Claude API 集成
+│   ├── ai_parse_service.py     #   AI 文本解析兜底
 │   ├── inventory_service.py    #   库存聚合
 │   ├── customer_service.py     #   客户追踪
 │   ├── watchlist_service.py    #   告警规则 & 检查
 │   ├── account_service.py      #   账号状态管理
-│   ├── ai_match_service.py     #   Claude API 集成
 │   └── auto_login.py           #   Playwright 自动登录
 │
 ├── static/
@@ -403,10 +412,13 @@ arc-manager-pro/
 
 ### Code Conventions
 
+- **全局影响优先**：修改前搜索所有引用，确认不会破坏关联处
+- **禁止重复**：共享逻辑放 `common.js` / `config.py`，不跨文件复制
 - **三层分离**：Routes 只做参数校验和转发，Services 包含全部业务逻辑，Database 通过 `get_conn()` 统一管理
 - **代码注释**：Python / JS 注释使用中文
 - **无 ORM**：直接使用原生 SQL，所有查询在 Services 层
 - **线程安全**：物品数据缓存使用 `threading.Lock` 保护
+- **改完必须验证**：启动检查日志零报错，逐页面确认无 console 错误
 
 ### Running in Development
 
